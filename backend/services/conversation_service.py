@@ -3,6 +3,7 @@
 from uuid import uuid4
 
 from backend.database.db import get_connection, now_iso
+from backend.services.product_info_service import product_info_service
 
 
 CONVERSATION_COLUMNS = (
@@ -206,6 +207,8 @@ class ConversationService:
         if memories:
             context += "\n\n相关长期记忆：\n" + "\n".join(f"- {item}" for item in memories)
         history = self.list_messages(conversation_id)[-30:]
+        latest_user_message = next((item["content"] for item in reversed(history) if item["role"] == "user"), "")
+        context += product_info_service.context_for(latest_user_message)
         return [{"role": "system", "content": context}] + [
             {"role": item["role"], "content": item["content"]}
             for item in history if item["role"] in ("user", "assistant", "tool")
@@ -251,13 +254,14 @@ class ConversationService:
             "show_message_time": setting_bool("show_message_time", True),
             "enter_to_send": setting_bool("enter_to_send", True),
             "animations_enabled": setting_bool("animations_enabled", True),
+            "ui_language": self.get_setting("ui_language") or "zh-CN",
         }
 
     def update_personalization_settings(self, values: dict[str, str | bool | None]) -> None:
         allowed = {
             "theme_mode", "color_scheme", "assistant_avatar", "user_avatar", "font_scale",
             "default_model", "reasoning_preference", "chat_density", "show_message_time",
-            "enter_to_send", "animations_enabled",
+            "enter_to_send", "animations_enabled", "ui_language",
         }
         with get_connection() as conn:
             timestamp = now_iso()

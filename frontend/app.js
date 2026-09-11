@@ -7,7 +7,7 @@ const state = {
   personalization: {
     theme_mode: "light", color_scheme: "green", assistant_avatar: "default", user_avatar: "default", font_scale: "standard",
     default_model: "deepseek", reasoning_preference: "balanced", chat_density: "comfortable",
-    show_message_time: true, enter_to_send: true, animations_enabled: true,
+    show_message_time: true, enter_to_send: true, animations_enabled: true, ui_language: "zh-CN",
   },
   personalizationSave: Promise.resolve(), menuConversation: null, searchQuery: "", searchResults: [], searchLoading: false, searchRequestId: 0, searchTimer: null,
 };
@@ -20,7 +20,7 @@ async function request(url, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 function modelLabel(model) { if (model === "gpt-5.6-terra") return "GPT-5.6 Terra"; if ((model || "").toLowerCase().startsWith("deepseek")) return "DeepSeek"; return model || "DeepSeek"; }
-function notify(message, type = "system") { const service = window.XiaoGNotification; if (service?.[type]) return service[type](message); return service?.system(message); }
+function notify(message, type = "system") { const service = window.XiaoGNotification, localized = window.XiaoGI18n?.t(message) || message; if (service?.[type]) return service[type](localized); return service?.system(localized); }
 function showToast(message, type = "system") { return notify(message, type); }
 function safeHttpUrl(value) { try { const url = new URL(value, window.location.href); return ["http:", "https:"].includes(url.protocol) ? url.href : null; } catch { return null; } }
 function renderLinkedText(container, text) {
@@ -70,7 +70,7 @@ function scrollToBottom(force = false) { if (force || state.autoScroll) messages
 function rememberScrollPosition() { if (state.conversationId) state.scrollPositions.set(state.conversationId, messagesEl.scrollTop); }
 function restoreScrollPosition(id) { const saved = state.scrollPositions.get(id), previous = messagesEl.style.scrollBehavior; messagesEl.style.scrollBehavior = "auto"; messagesEl.scrollTop = saved === undefined ? messagesEl.scrollHeight : saved; messagesEl.style.scrollBehavior = previous; state.autoScroll = isNearBottom(); syncScrollControls(); }
 function setSidebarCollapsed(value) { state.sidebarCollapsed = value; $("#app-shell").classList.toggle("sidebar-collapsed", value); $("#sidebar-toggle").textContent = value ? "›" : "‹"; $("#sidebar-toggle").setAttribute("aria-label", value ? "展开历史栏" : "收缩历史栏"); $("#sidebar-toggle").title = value ? "展开历史栏" : "收缩历史栏"; localStorage.setItem("xiaog.sidebarCollapsed", String(value)); }
-function setHeaderTitle(title) { state.currentTitle = title || "新聊天"; $("#conversation-title").textContent = state.currentTitle; $("#conversation-title").title = state.currentTitle; $("#edit-title").disabled = !state.conversationId || state.conversationArchived || state.conversationDeleted || state.generating; }
+function setHeaderTitle(title) { state.currentTitle = title || "新聊天"; const displayTitle = window.XiaoGI18n?.t(state.currentTitle) || state.currentTitle; $("#conversation-title").textContent = displayTitle; $("#conversation-title").title = displayTitle; $("#edit-title").disabled = !state.conversationId || state.conversationArchived || state.conversationDeleted || state.generating; }
 
 function avatarPreset(value) { return {
   default: ["G", "preset-default", "小G默认头像"], mario: ["M", "preset-mario", "马里奥头像"], pikachu: ["⚡", "preset-pikachu", "皮卡丘头像"], stitch: ["✦", "preset-stitch", "史迪奇头像"],
@@ -89,7 +89,7 @@ function applyAllAvatars() {
 }
 function formatMessageTime(value) {
   const date = value ? new Date(value) : new Date(); if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
+  return new Intl.DateTimeFormat(state.personalization.ui_language === "en" ? "en-US" : "zh-CN", { hour: "2-digit", minute: "2-digit", hour12: false }).format(date);
 }
 async function copyText(text) { try { await navigator.clipboard.writeText(text); showToast("已复制"); } catch { const helper = document.createElement("textarea"); helper.value = text; document.body.append(helper); helper.select(); document.execCommand("copy"); helper.remove(); showToast("已复制"); } }
 function sourcePromptAllowed() { if (state.conversationArchived || state.conversationDeleted) { showToast("请先恢复会话再继续操作"); return false; } return !state.generating; }
@@ -116,8 +116,8 @@ function messageElement(message, streaming = false, sourcePrompt = "") {
 }
 function addMessage(message, streaming = false, forceScroll = false, sourcePrompt = "") { if (messagesEl.querySelector(".empty-state")) messagesEl.innerHTML = ""; const element = messageElement(message, streaming, sourcePrompt); messagesEl.append(element); scrollToBottom(forceScroll); return element; }
 function renderMessages(messages) { messagesEl.innerHTML = ""; state.currentMessages = messages; if (!messages.length) return emptyMessages(); let lastUserPrompt = ""; for (const message of messages) { if (message.role === "user") lastUserPrompt = message.content; messagesEl.append(messageElement(message, false, message.role === "assistant" ? lastUserPrompt : "")); } }function conversationRestricted() { return state.conversationArchived || state.conversationDeleted; }
-function updateComposerHint() { const shortcut = state.personalization.enter_to_send ? "Enter 发送，Shift+Enter 换行" : "Ctrl/⌘+Enter 发送，Enter 换行"; $("#send-hint").textContent = `小G可能会犯错 · ${shortcut}`; if (!conversationRestricted()) inputEl.placeholder = `给小G发消息…（${shortcut}）`; }
-function setComposerRestricted() { const restricted = conversationRestricted(); inputEl.disabled = restricted || state.generating; sendButton.disabled = restricted || state.generating; inputEl.placeholder = state.conversationDeleted ? "回收站会话只能查看；恢复后可继续聊天。" : state.conversationArchived ? "已归档会话只能查看；恢复后可继续聊天。" : ""; updateComposerHint(); }
+function updateComposerHint() { const english = state.personalization.ui_language === "en", shortcut = state.personalization.enter_to_send ? (english ? "Enter to send, Shift+Enter for a new line" : "Enter 发送，Shift+Enter 换行") : (english ? "Ctrl/⌘+Enter to send, Enter for a new line" : "Ctrl/⌘+Enter 发送，Enter 换行"); $("#send-hint").textContent = english ? `XiaoG can make mistakes · ${shortcut}` : `小G可能会犯错 · ${shortcut}`; if (!conversationRestricted()) inputEl.placeholder = english ? `Message XiaoG… (${shortcut})` : `给小G发消息…（${shortcut}）`; }
+function setComposerRestricted() { const restricted = conversationRestricted(), english = state.personalization.ui_language === "en"; inputEl.disabled = restricted || state.generating; sendButton.disabled = restricted || state.generating; inputEl.placeholder = state.conversationDeleted ? (english ? "Trash conversations are read-only. Restore one to continue chatting." : "回收站会话只能查看；恢复后可继续聊天。") : state.conversationArchived ? (english ? "Archived conversations are read-only. Restore one to continue chatting." : "已归档会话只能查看；恢复后可继续聊天。") : ""; updateComposerHint(); }
 function setGenerating(value) { state.generating = value; stopButton.classList.toggle("hidden", !value); setComposerRestricted(); setHeaderTitle(state.currentTitle); syncModelStatus(value ? "requesting" : undefined); }
 function resizeInput() { inputEl.style.height = "auto"; inputEl.style.height = `${Math.min(inputEl.scrollHeight, 180)}px`; }
 function closeConversationMenu() { $("#conversation-menu").classList.add("hidden"); $("#conversation-menu").replaceChildren(); state.menuConversation = null; }
@@ -258,6 +258,7 @@ function normalizePersonalization(value = {}) {
     show_message_time: boolValue(value.show_message_time, true),
     enter_to_send: boolValue(value.enter_to_send, true),
     animations_enabled: boolValue(value.animations_enabled, true),
+    ui_language: value.ui_language === "en" ? "en" : "zh-CN",
   };
 }
 function applyPersonalization(value, options = {}) {
@@ -269,6 +270,8 @@ function applyPersonalization(value, options = {}) {
   root.dataset.chatDensity = state.personalization.chat_density;
   root.dataset.showMessageTime = String(state.personalization.show_message_time);
   root.dataset.animations = state.personalization.animations_enabled ? "on" : "off";
+  window.XiaoGI18n?.setLanguage(state.personalization.ui_language);
+  setHeaderTitle(state.currentTitle);
   if (options.selectDefault) {
     const option = modelSelect.querySelector(`option[value="${state.personalization.default_model}"]`);
     if (option && !option.disabled) { modelSelect.value = state.personalization.default_model; syncTerraControl(); syncModelStatus(); }
@@ -289,6 +292,7 @@ function renderPersonalizationControls() {
   const showTime = $("#show-message-time"); if (showTime) showTime.checked = state.personalization.show_message_time;
   const enterSend = $("#enter-to-send"); if (enterSend) enterSend.checked = state.personalization.enter_to_send;
   const animations = $("#animations-enabled"); if (animations) animations.checked = state.personalization.animations_enabled;
+  const language = $("#ui-language-setting"); if (language) language.value = state.personalization.ui_language;
   const preview = $("#user-avatar-preview"); if (preview) { preview.replaceChildren(); if (state.personalization.user_avatar.startsWith("data:image/")) { const image = document.createElement("img"); image.src = state.personalization.user_avatar; image.alt = "用户头像预览"; preview.append(image); } else preview.textContent = "U"; }
 }
 async function loadPersonalization() { applyPersonalization(await request("/api/settings/personalization"), { selectDefault: true }); }
@@ -317,7 +321,8 @@ async function cropAvatar(file) {
   const content = $("#about-content"); content.innerHTML = ""; const rows = [["名称", info.name], ["当前版本", info.version], ["Commit", info.commit], ["当前阶段", info.phase], ["搭载模型", (info.models || []).join(" · ")]], meta = document.createElement("dl"); meta.className = "about-meta";
   rows.forEach(([label, value]) => { const term = document.createElement("dt"), detail = document.createElement("dd"); term.textContent = label; detail.textContent = value || "—"; meta.append(term, detail); });
   const capabilities = document.createElement("div"); capabilities.className = "about-block"; capabilities.innerHTML = "<h4>当前能力</h4>"; const list = document.createElement("ul"); (info.capabilities || []).forEach((item) => { const line = document.createElement("li"); line.textContent = item; list.append(line); }); capabilities.append(list);
-  const log = document.createElement("div"); log.className = "about-block"; log.innerHTML = "<h4>更新日志</h4>"; (info.changelog || []).forEach((entry) => { const item = document.createElement("div"), title = document.createElement("strong"), entries = document.createElement("ul"); item.className = "changelog-item"; title.textContent = `${entry.version} · ${entry.title}`; (entry.items || []).forEach((text) => { const line = document.createElement("li"); line.textContent = text; entries.append(line); }); item.append(title, entries); log.append(item); }); content.append(meta, capabilities, log);
+  const limitations = document.createElement("div"); limitations.className = "about-block"; limitations.innerHTML = "<h4>当前限制</h4>"; const limitationList = document.createElement("ul"); (info.limitations || []).forEach((item) => { const line = document.createElement("li"); line.textContent = item; limitationList.append(line); }); limitations.append(limitationList);
+  const log = document.createElement("div"); log.className = "about-block"; log.innerHTML = "<h4>更新日志</h4>"; (info.changelog || []).forEach((entry) => { const item = document.createElement("div"), title = document.createElement("strong"), entries = document.createElement("ul"); item.className = "changelog-item"; title.textContent = `${entry.version} · ${entry.title}`; (entry.items || []).forEach((text) => { const line = document.createElement("li"); line.textContent = text; entries.append(line); }); item.append(title, entries); log.append(item); }); content.append(meta, capabilities, limitations, log);
 }
 async function openSettings() { const [settings, about, personalization] = await Promise.all([request("/api/settings"), request("/api/about"), request("/api/settings/personalization")]); $("#system-prompt").value = settings.system_prompt; $("#user-profile").value = settings.user_profile; renderAbout(about); applyPersonalization(personalization); activateSettingsTab("personalization"); $("#settings-dialog").showModal(); }
 function activateSettingsTab(name) { document.querySelectorAll("[data-settings-tab]").forEach((tab) => tab.classList.toggle("active", tab.dataset.settingsTab === name)); document.querySelectorAll("[data-settings-panel]").forEach((panel) => panel.classList.toggle("active", panel.dataset.settingsPanel === name)); }
@@ -343,6 +348,7 @@ $("#default-model-setting").onchange = (event) => choosePersonalization({ defaul
 $("#show-message-time").onchange = (event) => choosePersonalization({ show_message_time: event.target.checked });
 $("#enter-to-send").onchange = (event) => choosePersonalization({ enter_to_send: event.target.checked });
 $("#animations-enabled").onchange = (event) => choosePersonalization({ animations_enabled: event.target.checked });
+$("#ui-language-setting").onchange = (event) => choosePersonalization({ ui_language: event.target.value }, "界面语言已保存");
 $("#reset-assistant-avatar").onclick = () => choosePersonalization({ assistant_avatar: "default" });
 $("#user-avatar-input").onchange = async (event) => { const file = event.target.files?.[0]; if (!file) return; try { const avatar = await cropAvatar(file); await choosePersonalization({ user_avatar: avatar }, "头像已裁剪并保存"); } catch (error) { notify(error.message || "头像上传失败", "error"); } finally { event.target.value = ""; } };
 $("#reset-user-avatar").onclick = async () => { await choosePersonalization({ user_avatar: "default" }, "用户头像已删除"); };

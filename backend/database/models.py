@@ -39,6 +39,7 @@ class PersonalizationSettingsUpdate(BaseModel):
     show_message_time: bool | None = None
     enter_to_send: bool | None = None
     animations_enabled: bool | None = None
+    ui_language: str | None = Field(default=None, pattern="^(zh-CN|en)$")
 
     @field_validator("user_avatar")
     @classmethod

@@ -131,6 +131,7 @@ def initialize_database() -> None:
             ("show_message_time", "true"),
             ("enter_to_send", "true"),
             ("animations_enabled", "true"),
+            ("ui_language", "zh-CN"),
         ):
             conn.execute(
                 "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",

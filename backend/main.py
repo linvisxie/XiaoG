@@ -1,4 +1,4 @@
-"""FastAPI application entry point for XiaoG v0.1."""
+"""FastAPI application entry point for XiaoG."""
 
 import asyncio
 import json
@@ -22,6 +22,7 @@ from backend.services.codex_app_server_manager import codex_app_server_manager
 from backend.services.conversation_service import conversation_service
 from backend.services.memory_service import memory_service
 from backend.services.search_service import search_service
+from backend.services.product_info_service import product_info_service
 
 
 def configure_logging() -> None:
@@ -49,9 +50,8 @@ async def lifespan(_app: FastAPI):
         await codex_app_server_manager.close()
 
 
-app = FastAPI(title="XiaoG", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="XiaoG", version=product_info_service.public_info().get("version", "unknown"), lifespan=lifespan)
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
-PRODUCT_INFO_PATH = settings.project_root / "product_info.json"
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
@@ -66,15 +66,16 @@ async def index() -> FileResponse:
 
 @app.get("/health")
 async def health() -> dict:
-    return {"status": "ok", "app": "XiaoG", "version": "0.1.0"}
+    info = product_info_service.public_info()
+    return {"status": "ok", "app": "XiaoG", "version": info.get("version", "unknown"), "phase": info.get("phase", "unknown")}
 
 
 @app.get("/api/about")
 async def about() -> dict:
-    try:
-        return json.loads(PRODUCT_INFO_PATH.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+    info = product_info_service.public_info()
+    if not info.get("version"):
         raise HTTPException(status_code=500, detail="无法读取 XiaoG 产品信息。")
+    return info
 
 
 @app.get("/api/provider-status")
