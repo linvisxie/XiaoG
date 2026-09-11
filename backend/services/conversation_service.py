@@ -50,6 +50,17 @@ class ConversationService:
             result = conn.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
         return result.rowcount > 0
 
+    def update_title(self, conversation_id: str, title: str) -> bool:
+        clean_title = " ".join(title.split())[:120]
+        if not clean_title:
+            return False
+        with get_connection() as conn:
+            result = conn.execute(
+                "UPDATE conversations SET title = ?, updated_at = ? WHERE id = ?",
+                (clean_title, now_iso(), conversation_id),
+            )
+        return result.rowcount > 0
+
     def set_codex_thread(self, conversation_id: str, thread_id: str) -> None:
         with get_connection() as conn:
             conn.execute("UPDATE conversations SET codex_thread_id = ? WHERE id = ?", (thread_id, conversation_id))

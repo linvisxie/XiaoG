@@ -7,55 +7,48 @@
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
-  <div class="app-shell">
+  <div class="app-shell" id="app-shell">
     <aside class="sidebar" aria-label="会话列表">
       <div class="sidebar-main">
-        <div class="brand"><span class="brand-mark">G</span><span>小G</span></div>
-        <button id="new-chat" class="new-chat"><span>新聊天</span><span aria-hidden="true">+</span></button>
-        <div class="conversation-heading" id="conversation-heading">历史对话</div>
+        <div class="brand-row">
+          <div class="brand"><span class="brand-mark">G</span><span class="sidebar-label">小G</span></div>
+          <button id="sidebar-toggle" class="sidebar-toggle" type="button" aria-label="收缩历史栏" title="收缩历史栏">‹</button>
+        </div>
+        <button id="new-chat" class="new-chat"><span class="sidebar-label">新聊天</span><span aria-hidden="true">+</span></button>
+        <label class="history-search" for="history-search"><span aria-hidden="true">⌕</span><input id="history-search" type="search" placeholder="搜索历史标题" autocomplete="off" /></label>
+        <div class="conversation-heading"><span id="conversation-heading">历史对话</span><button id="back-to-history" class="text-action hidden" type="button">← 返回历史</button></div>
         <div id="conversation-list" class="conversation-list"></div>
       </div>
       <div class="sidebar-bottom">
-        <button id="open-archived" class="sidebar-action">▣ <span>已归档</span></button>
-        <button id="open-settings" class="settings-button">⚙ <span>设置</span></button>
+        <button id="open-archived" class="sidebar-action">▣ <span class="sidebar-label">已归档</span></button>
+        <button id="open-settings" class="settings-button">⚙ <span class="sidebar-label">设置</span></button>
       </div>
     </aside>
     <main class="chat-area">
       <header class="topbar">
-        <div class="topbar-title"><strong>小G</strong><span id="provider-note" class="provider-note">正在检查模型状态…</span></div>
-        <div class="model-controls">
-          <label class="model-select-label">模型
-            <select id="model-select" aria-label="选择模型">
-              <option value="auto">Auto</option>
-              <option value="deepseek">DeepSeek</option>
-              <option value="terra">GPT-5.6 Terra</option>
-            </select>
-          </label>
-          <div id="terra-effort-control" class="terra-effort hidden" aria-label="Terra 推理档位">
-            <span class="effort-label">推理</span><div id="terra-effort-options" class="segmented-control" role="group" aria-label="Terra reasoning effort"></div>
-          </div>
+        <div class="topbar-left">
+          <div class="conversation-title-row"><strong>小G</strong><span class="title-divider">/</span><button id="conversation-title" class="conversation-title" type="button" title="当前会话标题">新聊天</button><button id="edit-title" class="edit-title" type="button" title="修改会话标题" aria-label="修改会话标题">✎</button></div>
+          <span id="provider-note" class="provider-note">正在检查模型状态…</span>
+        </div>
+        <div class="model-controls" aria-label="模型设置">
+          <label class="model-select-label"><span>模型</span><select id="model-select" aria-label="选择模型"><option value="deepseek">DeepSeek</option><option value="terra">GPT-5.6 Terra</option></select></label>
+          <div id="terra-effort-control" class="terra-effort" aria-label="Terra 推理档位"><span class="effort-label">推理</span><div id="terra-effort-options" class="segmented-control" role="group" aria-label="Terra reasoning effort"></div></div>
         </div>
       </header>
-      <section id="messages" class="messages" aria-live="polite">
-        <div class="empty-state"><div class="empty-logo">G</div><h1>你好，我是小G。</h1><p>我会把对话保存在你的电脑里。告诉我今天想一起完成什么？</p></div>
-      </section>
+      <section id="messages" class="messages" aria-live="polite"><div class="empty-state"><div class="empty-logo">G</div><h1>你好，我是小G。</h1><p>我会把对话保存在你的电脑里。告诉我今天想一起完成什么？</p></div></section>
       <button id="back-to-bottom" class="back-to-bottom hidden" type="button" aria-label="回到底部">↓ 回到底部</button>
-      <footer class="composer-wrap">
-        <form id="chat-form" class="composer">
-          <textarea id="message-input" rows="1" placeholder="给小G发消息…（Enter 发送，Shift+Enter 换行）" aria-label="消息内容"></textarea>
-          <div class="composer-actions"><span id="send-hint">小G可能会犯错，请核对重要信息。</span><button id="stop-button" type="button" class="secondary hidden">停止生成</button><button id="send-button" type="submit">发送</button></div>
-        </form>
-      </footer>
+      <footer class="composer-wrap"><form id="chat-form" class="composer"><textarea id="message-input" rows="1" placeholder="给小G发消息…（Enter 发送，Shift+Enter 换行）" aria-label="消息内容"></textarea><div class="composer-actions"><span id="send-hint">小G可能会犯错，请核对重要信息。</span><button id="stop-button" type="button" class="secondary hidden">停止生成</button><button id="send-button" type="submit">发送</button></div></form></footer>
     </main>
   </div>
-  <dialog id="settings-dialog">
-    <form id="settings-form" method="dialog" class="settings-form">
-      <div class="dialog-heading"><h2>小G 设置</h2><button type="button" class="icon-button" id="close-settings" aria-label="关闭">×</button></div>
-      <label>统一人格 / System Prompt<textarea id="system-prompt" rows="8"></textarea></label>
-      <label>用户资料（可选）<textarea id="user-profile" rows="5" placeholder="例如：我是历史学本科生，偏好中文解释。"></textarea></label>
-      <p class="dialog-tip">这些内容保存在本机 SQLite 数据库，不会写入 DeepSeek Provider 代码。</p>
-      <div class="dialog-actions"><button type="button" class="secondary" id="cancel-settings">取消</button><button type="submit">保存设置</button></div>
-    </form>
+  <dialog id="settings-dialog" aria-label="小G 设置">
+    <div class="settings-layout">
+      <aside class="settings-nav" aria-label="设置分类"><div class="dialog-heading"><h2>设置</h2><button type="button" class="icon-button" id="close-settings" aria-label="关闭">×</button></div><button class="settings-tab active" type="button" data-settings-tab="personalization">个性化</button><button class="settings-tab" type="button" data-settings-tab="about">关于</button><button class="settings-tab" type="button" data-settings-tab="system">系统</button></aside>
+      <div class="settings-content">
+        <section class="settings-panel active" data-settings-panel="personalization"><h3>个性化</h3><p class="dialog-tip">个性化偏好将在后续阶段开放。当前不会建立长期记忆，也不会改变模型调用方式。</p></section>
+        <section class="settings-panel" data-settings-panel="about"><h3>关于 XiaoG</h3><div id="about-content" class="about-content"><p class="dialog-tip">正在读取产品信息…</p></div></section>
+        <section class="settings-panel" data-settings-panel="system"><h3>系统</h3><form id="settings-form"><label>统一人格 / System Prompt<textarea id="system-prompt" rows="8"></textarea></label><label>用户资料（可选）<textarea id="user-profile" rows="5" placeholder="例如：我是历史学本科生，偏好中文解释。"></textarea></label><p class="dialog-tip">这些内容保存在本机 SQLite 数据库，不会写入 Provider 代码。</p><div class="dialog-actions"><button type="submit">保存设置</button></div></form></section>
+      </div>
+    </div>
   </dialog>
   <script src="/static/app.js"></script>
 </body>

@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.config import settings
 from backend.database.db import initialize_database
-from backend.database.models import ChatRequest, ConversationCreate, SettingsUpdate
+from backend.database.models import ChatRequest, ConversationCreate, ConversationTitleUpdate, SettingsUpdate
 from backend.pricing import estimate_deepseek_cost
 from backend.providers.base import ProviderError
 from backend.router.model_router import model_router
@@ -49,6 +49,7 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="XiaoG", version="0.1.0", lifespan=lifespan)
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+PRODUCT_INFO_PATH = settings.project_root / "product_info.json"
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
@@ -66,6 +67,14 @@ async def health() -> dict:
     return {"status": "ok", "app": "XiaoG", "version": "0.1.0"}
 
 
+@app.get("/api/about")
+async def about() -> dict:
+    try:
+        return json.loads(PRODUCT_INFO_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        raise HTTPException(status_code=500, detail="无法读取 XiaoG 产品信息。")
+
+
 @app.get("/api/provider-status")
 async def provider_status() -> dict:
     return await model_router.status()
@@ -79,6 +88,15 @@ async def list_conversations(archived: bool = False) -> list[dict]:
 @app.post("/api/conversations", status_code=201)
 async def create_conversation(payload: ConversationCreate) -> dict:
     return conversation_service.create_conversation(payload.title)
+
+
+@app.patch("/api/conversations/{conversation_id}")
+async def update_conversation_title(conversation_id: str, payload: ConversationTitleUpdate) -> dict:
+    if not conversation_service.update_title(conversation_id, payload.title):
+        raise HTTPException(status_code=404, detail="找不到该会话，或标题不能为空。")
+    conversation = conversation_service.get_conversation(conversation_id)
+    assert conversation is not None
+    return conversation
 
 
 @app.get("/api/conversations/{conversation_id}")
