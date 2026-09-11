@@ -62,11 +62,11 @@ class ConversationService:
         history = self.list_messages(conversation_id)[-30:]
         return [{"role": "system", "content": context}] + [{"role": item["role"], "content": item["content"]} for item in history if item["role"] in ("user", "assistant", "tool")]
 
-    def record_usage(self, conversation_id: str, provider: str, model: str, usage: dict | None, estimated_cost: float | None, latency_ms: int) -> None:
+    def record_usage(self, conversation_id: str, provider: str, model: str, usage: dict | None, estimated_cost: float | None, latency_ms: int, billing_type: str = "api") -> None:
         with get_connection() as conn:
             conn.execute("""INSERT INTO model_usage(id, conversation_id, provider, model, billing_type, input_tokens, output_tokens, estimated_cost, latency_ms, created_at)
-                         VALUES (?, ?, ?, ?, 'api', ?, ?, ?, ?, ?)""", (
-                str(uuid4()), conversation_id, provider, model,
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", (
+                str(uuid4()), conversation_id, provider, model, billing_type,
                 (usage or {}).get("prompt_tokens"), (usage or {}).get("completion_tokens"),
                 estimated_cost, latency_ms, now_iso(),
             ))

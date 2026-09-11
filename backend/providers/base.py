@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -16,6 +16,7 @@ class ProviderStatus:
     available: bool
     message: str
     models: list[dict[str, Any]]
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 class ModelProvider(ABC):

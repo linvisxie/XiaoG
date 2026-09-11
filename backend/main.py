@@ -111,9 +111,14 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
         answer = ""
         usage = None
         actual_model = settings.deepseek_model_id
+        provider_name = "deepseek"
+        billing_type = "api"
         started = time.perf_counter()
         try:
             provider, display_name = await model_router.select(payload.model_preference)
+            provider_name = provider.name
+            actual_model = getattr(provider, "model_id", actual_model)
+            billing_type = getattr(provider, "billing_type", "api")
             system_prompt = conversation_service.get_setting("system_prompt")
             profile = memory_service.get_user_profile()
             memories = memory_service.get_relevant_memories(content)
@@ -127,16 +132,16 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
                     usage = item["usage"]
                     actual_model = item.get("model") or actual_model
             if not answer:
-                raise ProviderError("DeepSeek没有返回可显示的内容，请稍后重试。")
+                raise ProviderError("模型没有返回可显示的内容，请稍后重试。")
             latency_ms = round((time.perf_counter() - started) * 1000)
-            conversation_service.add_message(conversation_id, "assistant", answer, provider.name, actual_model)
+            conversation_service.add_message(conversation_id, "assistant", answer, provider_name, actual_model)
             cost = estimate_deepseek_cost(actual_model, usage) if provider.name == "deepseek" else None
-            conversation_service.record_usage(conversation_id, provider.name, actual_model, usage, cost, latency_ms)
+            conversation_service.record_usage(conversation_id, provider_name, actual_model, usage, cost, latency_ms, billing_type)
             yield event_stream("done", {"provider": provider.name, "model": actual_model, "display_name": display_name, "usage": usage, "latency_ms": latency_ms})
         except asyncio.CancelledError:
             # A browser-side Stop cancels the request. Save any content already received.
             if answer:
-                conversation_service.add_message(conversation_id, "assistant", answer + "\n\n[已停止生成]", "deepseek", actual_model)
+                conversation_service.add_message(conversation_id, "assistant", answer + "\n\n[已停止生成]", provider_name, actual_model)
             raise
         except ProviderError as exc:
             logging.getLogger(__name__).warning("Provider request failed: %s", exc)

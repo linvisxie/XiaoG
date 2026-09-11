@@ -15,6 +15,11 @@ async function request(url, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 
+function modelLabel(model) {
+  if (model === "gpt-5.6-terra") return "GPT-5.6 Terra";
+  if ((model || "").toLowerCase().startsWith("deepseek")) return "DeepSeek";
+  return model || "DeepSeek";
+}
 function escapeText(text) { return document.createTextNode(text); }
 function scrollToBottom() { window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" }); }
 function emptyMessages() { messagesEl.innerHTML = `<div class="empty-state"><div class="empty-logo">G</div><h1>你好，我是小G。</h1><p>我会把对话保存在你的电脑里。告诉我今天想一起完成什么？</p></div>`; }
@@ -25,7 +30,7 @@ function messageElement(message, streaming = false) {
   const avatar = document.createElement("div"); avatar.className = "message-avatar"; avatar.textContent = message.role === "assistant" ? "G" : "你";
   const body = document.createElement("div"); body.className = "message-body";
   const meta = document.createElement("div"); meta.className = "message-meta";
-  meta.textContent = message.role === "assistant" ? `小G · ${message.model || "DeepSeek"}` : "你";
+  meta.textContent = message.role === "assistant" ? `小G · ${modelLabel(message.model)}` : "你";
   const content = document.createElement("div"); content.className = "message-content"; content.appendChild(escapeText(message.content || ""));
   if (streaming) { const cursor = document.createElement("span"); cursor.className = "cursor"; content.appendChild(cursor); }
   body.append(meta, content); article.append(avatar, body); return article;
@@ -83,7 +88,7 @@ async function sendMessage(content) {
   }
 }
 
-async function loadProviderStatus() { try { const status = await request("/api/provider-status"); $("#provider-note").textContent = status.deepseek.message; const terra = modelSelect.querySelector('option[value="terra"]'); terra.disabled = true; terra.textContent = "GPT-5.6 Terra（Phase 3）"; } catch { $("#provider-note").textContent = "无法读取模型状态。"; } }
+async function loadProviderStatus() { try { const status = await request("/api/provider-status"); const terra = modelSelect.querySelector('option[value="terra"]'); terra.disabled = !status.terra.available; terra.textContent = status.terra.available ? "GPT-5.6 Terra" : "当前账户未提供 GPT-5.6 Terra"; $("#provider-note").textContent = status.terra.available ? "Terra 可用；Auto 默认使用 DeepSeek。" : status.terra.message; } catch { $("#provider-note").textContent = "无法读取模型状态。"; } }
 
 async function openSettings() { const settings = await request("/api/settings"); $("#system-prompt").value = settings.system_prompt; $("#user-profile").value = settings.user_profile; $("#settings-dialog").showModal(); }
 

@@ -1,4 +1,4 @@
-# 小G学习笔记：Phase 0～2
+# 小G学习笔记：Phase 0～3
 
 这不是脱离项目的术语表。请一边打开对应文件，一边看这些解释；每个概念都能在小G里找到实际位置。
 
@@ -16,7 +16,7 @@
 - `backend/services/conversation_service.py`：保存、读取、删除会话和消息；它不是模型厂商的一部分。
 - `backend/providers/deepseek.py`：唯一知道 DeepSeek HTTP 接口细节的地方。
 - `backend/router/model_router.py`：决定选择哪个模型。现在 Auto 明确选择 DeepSeek。
-- `backend/providers/terra.py`：未来接口占位，不会在 v0.1 偷偷调用任何 OpenAI 服务。
+- `backend/providers/codex_app_server.py`：小G与官方 Codex App Server 的 JSON-RPC 通信小客户端；它不读取登录凭据。`backend/providers/terra.py`：只通过该官方客户端调用 GPT-5.6 Terra。
 - `backend/tools/`：未来 G-BRIDGE 的安全工具入口，现在不会控制电脑。
 
 ## 1. 前端和后端是什么？
@@ -74,4 +74,18 @@ SQLite 是一个轻量数据库，全部数据装在一个本机文件 `data/xia
 3. 新建两个会话，重启后确认它们仍显示在左边。
 4. 打开 `backend/router/model_router.py`，观察 Auto 为什么现在只选 DeepSeek。不要急着把 Terra 选项改成可用：Phase 3 要先走官方认证与 `model/list` 验证。
 
-下一步（Phase 3）才会研究并接入官方 Codex App Server。先把 Phase 0～2 跑熟，会让后续学习轻松很多。
+Phase 3 已完成；下一步需要你确认后才进入 Phase 4（更完整的跨模型切换体验），之后才是 Phase 5 的 Auto Router。
+
+## 6. Phase 3：为什么模型能切换却不会“失忆”？
+
+Terra 不是 DeepSeek 的附属功能。`backend/providers/terra.py` 只知道怎样通过官方 Codex App Server 请求 Terra；它不知道数据库怎样保存你的会话。反过来，`ConversationService` 只负责从 SQLite 读出本地的近期消息、人格和资料；它不关心最终由哪个模型回答。
+
+当你选择 Terra 时，`ModelRouter` 先让 `TerraProvider` 调用官方 `model/list`。若你的账户没有真实返回 `gpt-5.6-terra`，小G会明确说不可用，不会假装调用成功。若可用，`build_canonical_context()` 会把小G自己保存的系统提示、此前用户消息和此前回答，整理成一份上下文后传给 Terra。因此一次对话可以是：DeepSeek 回答第一句，Terra 回答第二句，DeepSeek 理解第三句。
+
+这叫做“适配器”设计：同一套小G会话系统，对不同模型使用不同的通信适配器。好处是以后增加模型时，不必把人格、聊天记录或 API 密钥复制到每个模型文件里。
+
+## 7. 官方登录与订阅额度为什么不放进 .env？
+
+DeepSeek 是 API 服务，所以它需要你自己放在 `.env` 的 API Key。Terra 这次走的是另一条正式路径：本机官方 Codex CLI 已有的 ChatGPT 登录状态。`codex app-server` 自己处理登录，XiaoG只发送标准 JSON-RPC 请求，例如“列出模型”“创建线程”“开始回合”。
+
+因此项目不会、也不应该读取浏览器 Cookie、ChatGPT 网页接口或登录 token。Terra 的账本记录 `subscription`，没有逐次美元成本；如果官方返回套餐窗口使用情况，小G显示它；没有返回就留空。诚实地保留“不知道”，比编造一个 token 或价格更重要。

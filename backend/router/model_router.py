@@ -12,7 +12,10 @@ class ModelRouter:
 
     async def select(self, preference: str) -> tuple[ModelProvider, str]:
         if preference == "terra":
-            raise ProviderError("当前账户未提供 GPT-5.6 Terra。它将在 Phase 3 按官方 Codex App Server 方案接入后检测。")
+            status = await self.terra.health_check()
+            if not status.available:
+                raise ProviderError(status.message)
+            return self.terra, "GPT-5.6 Terra"
         # Auto is intentionally simple and visible: v0.1 always chooses DeepSeek.
         return self.deepseek, "DeepSeek"
 
@@ -20,8 +23,8 @@ class ModelRouter:
         deepseek = await self.deepseek.health_check()
         terra = await self.terra.health_check()
         return {
-            "deepseek": {"available": deepseek.available, "message": deepseek.message, "models": deepseek.models},
-            "terra": {"available": terra.available, "message": terra.message, "models": terra.models},
+            "deepseek": {"available": deepseek.available, "message": deepseek.message, "models": deepseek.models, "details": deepseek.details},
+            "terra": {"available": terra.available, "message": terra.message, "models": terra.models, "details": terra.details},
             "auto": {"available": deepseek.available, "message": "Auto 在 v0.1 默认使用 DeepSeek。"},
         }
 
