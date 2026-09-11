@@ -16,14 +16,19 @@
         </div>
         <button id="new-chat" class="new-chat"><span class="sidebar-label">新聊天</span><span aria-hidden="true">+</span></button>
         <label class="history-search" for="history-search"><span aria-hidden="true">⌕</span><input id="history-search" type="search" placeholder="搜索历史标题" autocomplete="off" /></label>
-        <div class="conversation-heading"><span id="conversation-heading">历史对话</span><button id="back-to-history" class="text-action hidden" type="button">← 返回历史</button></div>
+        <div class="conversation-heading">
+          <span id="conversation-heading">历史对话</span>
+          <div class="heading-actions"><button id="back-to-history" class="text-action hidden" type="button">← 返回历史</button><button id="empty-trash" class="text-action danger hidden" type="button">清空</button></div>
+        </div>
         <div id="conversation-list" class="conversation-list"></div>
       </div>
       <div class="sidebar-bottom">
-        <button id="open-archived" class="sidebar-action">▣ <span class="sidebar-label">已归档</span></button>
+        <button id="open-archived" class="sidebar-action"><svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM3 4h18v3H3zm6 7h6" /></svg><span class="sidebar-label">已归档</span></button>
+        <button id="open-trash" class="sidebar-action"><svg class="sidebar-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M9 4h6l1 3H8l1-3zm-3 3 1 13h10l1-13M10 11v5m4-5v5" /></svg><span class="sidebar-label">回收站</span></button>
         <button id="open-settings" class="settings-button">⚙ <span class="sidebar-label">设置</span></button>
       </div>
     </aside>
+
     <main class="chat-area">
       <header class="topbar">
         <div class="topbar-left">
@@ -31,25 +36,102 @@
           <span id="provider-note" class="provider-note">正在检查模型状态…</span>
         </div>
         <div class="model-controls" aria-label="模型设置">
-          <label class="model-select-label"><span>模型</span><select id="model-select" aria-label="选择模型"><option value="deepseek">DeepSeek</option><option value="terra">GPT-5.6 Terra</option></select></label>
+          <div class="model-select-wrap">
+            <label class="model-select-label"><span>模型</span><select id="model-select" aria-label="选择模型"><option value="deepseek">DeepSeek</option><option value="terra">GPT-5.6 Terra</option></select></label>
+            <span id="model-status" class="model-status available" aria-live="polite"><span class="status-dot"></span><span id="model-status-label">DeepSeek</span></span>
+            <button class="auto-tooltip" type="button" aria-label="Auto 模式说明">Auto ⓘ<span role="tooltip">Auto会根据任务复杂度自动选择合适模型。Phase 5 前不会参与模型调用。</span></button>
+          </div>
           <div id="terra-effort-control" class="terra-effort" aria-label="Terra 推理档位"><span class="effort-label">推理</span><div id="terra-effort-options" class="segmented-control" role="group" aria-label="Terra reasoning effort"></div></div>
         </div>
       </header>
-      <section id="messages" class="messages" aria-live="polite"><div class="empty-state"><div class="empty-logo">G</div><h1>你好，我是小G。</h1><p>我会把对话保存在你的电脑里。告诉我今天想一起完成什么？</p></div></section>
+
+      <section id="messages" class="messages" aria-live="polite"></section>
       <button id="back-to-bottom" class="back-to-bottom hidden" type="button" aria-label="回到底部">↓ 回到底部</button>
-      <footer class="composer-wrap"><form id="chat-form" class="composer"><textarea id="message-input" rows="1" placeholder="给小G发消息…（Enter 发送，Shift+Enter 换行）" aria-label="消息内容"></textarea><div class="composer-actions"><span id="send-hint">小G可能会犯错，请核对重要信息。</span><button id="stop-button" type="button" class="secondary hidden">停止生成</button><button id="send-button" type="submit">发送</button></div></form></footer>
+      <footer class="composer-wrap">
+        <form id="chat-form" class="composer">
+          <textarea id="message-input" rows="1" placeholder="给小G发消息…（Enter 发送，Shift+Enter 换行）" aria-label="消息内容"></textarea>
+          <div class="composer-actions">
+            <div class="composer-tools"><button type="button" class="composer-tool" data-coming-soon="附件能力将在 Phase 6.5 开放" aria-label="添加附件" title="添加附件（Phase 6.5）"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 12 6-6a3 3 0 0 1 4 4l-8 8a5 5 0 0 1-7-7l8-8" /></svg></button><button type="button" class="composer-tool" data-coming-soon="语音能力将在 Phase 8.5 开放" aria-label="语音输入" title="语音输入（后续阶段）"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8" /></svg></button></div>
+            <span id="send-hint">小G可能会犯错，请核对重要信息。</span><button id="stop-button" type="button" class="secondary hidden">停止生成</button><button id="send-button" type="submit">发送</button>
+          </div>
+        </form>
+      </footer>
     </main>
   </div>
+
+  <div id="conversation-menu" class="conversation-menu hidden" role="menu" aria-label="会话操作"></div>
+  <div id="notification-region" class="notification-region" aria-live="polite" aria-atomic="false"></div>
+
   <dialog id="settings-dialog" aria-label="小G 设置">
     <div class="settings-layout">
-      <aside class="settings-nav" aria-label="设置分类"><div class="dialog-heading"><h2>设置</h2><button type="button" class="icon-button" id="close-settings" aria-label="关闭">×</button></div><button class="settings-tab active" type="button" data-settings-tab="personalization">个性化</button><button class="settings-tab" type="button" data-settings-tab="about">关于</button><button class="settings-tab" type="button" data-settings-tab="system">系统</button></aside>
+      <aside class="settings-nav" aria-label="设置分类">
+        <div class="dialog-heading"><h2>设置</h2><button type="button" class="icon-button" id="close-settings" aria-label="关闭">×</button></div>
+        <button class="settings-tab active" type="button" data-settings-tab="personalization">个性化</button>
+        <button class="settings-tab" type="button" data-settings-tab="intelligence">模型与智能</button>
+        <button class="settings-tab" type="button" data-settings-tab="application">应用设置</button>
+        <button class="settings-tab" type="button" data-settings-tab="privacy">数据与隐私</button>
+        <button class="settings-tab" type="button" data-settings-tab="about">关于</button>
+        <button class="settings-tab" type="button" data-settings-tab="system">系统</button>
+      </aside>
       <div class="settings-content">
-        <section class="settings-panel active" data-settings-panel="personalization"><h3>个性化</h3><p class="dialog-tip">个性化偏好将在后续阶段开放。当前不会建立长期记忆，也不会改变模型调用方式。</p></section>
+        <section class="settings-panel active" data-settings-panel="personalization">
+          <h3>个性化</h3>
+          <div class="settings-group"><h4>模式</h4><div class="choice-row" role="radiogroup" aria-label="显示模式"><label class="select-card"><input type="radio" name="theme-mode" value="light" /> 原版模式</label><label class="select-card"><input type="radio" name="theme-mode" value="dark" /> 深色模式</label></div></div>
+          <div class="settings-group"><h4>配色</h4><div id="color-scheme-options" class="choice-row" role="group" aria-label="界面配色"><button type="button" class="choice-button" data-color-scheme="green"><span class="color-swatch green"></span>绿色</button><button type="button" class="choice-button" data-color-scheme="blue"><span class="color-swatch blue"></span>蓝色</button><button type="button" class="choice-button" data-color-scheme="purple"><span class="color-swatch purple"></span>紫色</button></div></div>
+          <div class="settings-group avatar-setting-header"><div><h4>小G头像</h4><p class="dialog-tip">选择后可立即预览。</p></div><button id="reset-assistant-avatar" type="button" class="secondary compact">恢复默认</button></div>
+          <div class="assistant-avatar-preview-wrap"><span id="assistant-avatar-preview" class="assistant-avatar-preview preset-default">G</span><span>聊天头像预览</span></div>
+          <div id="assistant-avatar-options" class="avatar-options" role="group" aria-label="小G头像">
+            <button type="button" class="avatar-option" data-assistant-avatar="default"><span class="avatar-sample preset-default">G</span>默认</button>
+            <button type="button" class="avatar-option" data-assistant-avatar="mario"><span class="avatar-sample preset-mario">M</span>马里奥</button>
+            <button type="button" class="avatar-option" data-assistant-avatar="pikachu"><span class="avatar-sample preset-pikachu">⚡</span>皮卡丘</button>
+            <button type="button" class="avatar-option" data-assistant-avatar="stitch"><span class="avatar-sample preset-stitch">✦</span>史迪奇</button>
+            <button type="button" class="avatar-option" data-assistant-avatar="compass"><span class="avatar-sample preset-compass">◈</span>罗盘</button>
+            <button type="button" class="avatar-option" data-assistant-avatar="cloud"><span class="avatar-sample preset-cloud">☁</span>云朵</button>
+            <button type="button" class="avatar-option" data-assistant-avatar="moon"><span class="avatar-sample preset-moon">☾</span>月亮</button>
+            <button type="button" class="avatar-option" data-assistant-avatar="spark"><span class="avatar-sample preset-spark">✧</span>星光</button>
+          </div>
+          <div class="settings-group"><h4>用户头像</h4><div class="user-avatar-settings"><span id="user-avatar-preview" class="avatar-sample user-avatar-preview">U</span><label class="upload-avatar-button" for="user-avatar-input">上传本地图片</label><input id="user-avatar-input" type="file" accept="image/png,image/jpeg,image/webp" hidden /><button id="reset-user-avatar" type="button" class="secondary compact">删除头像</button></div><p class="dialog-tip">支持 PNG、JPEG、WebP，原图不超过 10MB；自动裁剪并保存为 256×256 WebP。</p></div>
+          <p id="personalization-status" class="dialog-tip" aria-live="polite">设置会保存在这台电脑上。</p>
+        </section>
+
+        <section class="settings-panel" data-settings-panel="intelligence">
+          <h3>模型与智能</h3>
+          <div class="settings-group"><label class="field-label" for="default-model-setting">默认模型</label><select id="default-model-setting" class="settings-select"><option value="deepseek">DeepSeek</option><option value="terra">GPT-5.6 Terra</option></select><p class="dialog-tip">新打开页面时优先选择此模型，不改变当前 Provider 调用流程。</p></div>
+          <div class="settings-group"><h4>Auto 模式</h4><button type="button" class="reserved-feature" data-reserved-feature="Auto Router 将在 Phase 5 开放" disabled><span>Auto 自动选择模型</span><span class="phase-badge">Phase 5</span></button><p class="dialog-tip">这里只保留产品入口，本阶段不会自动路由模型。</p></div>
+          <div class="settings-group"><h4>推理偏好</h4><div id="reasoning-preference-options" class="choice-row" role="group" aria-label="推理偏好"><button type="button" class="choice-button" data-reasoning-preference="fast">响应优先</button><button type="button" class="choice-button" data-reasoning-preference="balanced">均衡</button><button type="button" class="choice-button" data-reasoning-preference="deep">深度优先</button></div><p class="dialog-tip">偏好会保存供未来智能模式使用；当前 Terra 档位仍由顶部控件明确选择。</p></div>
+        </section>
+
+        <section class="settings-panel" data-settings-panel="application">
+          <h3>应用设置</h3>
+          <div class="settings-group"><h4>显示 · 字号大小</h4><div id="font-scale-options" class="choice-row" role="group" aria-label="字号大小"><button type="button" class="choice-button" data-font-scale="small">小</button><button type="button" class="choice-button" data-font-scale="standard">标准</button><button type="button" class="choice-button" data-font-scale="large">大</button><button type="button" class="choice-button" data-font-scale="xlarge">特大</button></div></div>
+          <div class="settings-group"><h4>聊天显示</h4><div id="chat-density-options" class="choice-row" role="group" aria-label="聊天显示密度"><button type="button" class="choice-button" data-chat-density="comfortable">舒适</button><button type="button" class="choice-button" data-chat-density="compact">紧凑</button></div></div>
+          <div class="setting-switch-row"><div><strong>显示消息时间</strong><p>在每条消息名称旁显示本机时间。</p></div><label class="switch"><input id="show-message-time" type="checkbox" /><span></span></label></div>
+          <div class="setting-switch-row"><div><strong>Enter 发送</strong><p>关闭后使用 Ctrl/⌘ + Enter 发送，Enter 换行。</p></div><label class="switch"><input id="enter-to-send" type="checkbox" /><span></span></label></div>
+          <div class="setting-switch-row"><div><strong>动画效果</strong><p>控制界面过渡、提示和流式光标动画。</p></div><label class="switch"><input id="animations-enabled" type="checkbox" /><span></span></label></div>
+        </section>
+
+        <section class="settings-panel" data-settings-panel="privacy">
+          <h3>数据与隐私</h3>
+          <p class="section-intro">本阶段建立统一入口，数据操作能力将在后续独立阶段实现。</p>
+          <div class="reserved-grid">
+            <button type="button" class="reserved-card" data-coming-soon="数据导入/导出将在后续阶段开放"><span class="reserved-icon">⇅</span><span><strong>数据导入 / 导出</strong><small>迁移或备份本机 XiaoG 数据</small></span><span>›</span></button>
+            <button type="button" class="reserved-card" data-coming-soon="缓存管理将在后续阶段开放"><span class="reserved-icon">◫</span><span><strong>缓存管理</strong><small>查看与清理临时缓存</small></span><span>›</span></button>
+            <button type="button" class="reserved-card" data-coming-soon="搜索索引将在后续阶段开放"><span class="reserved-icon">⌕</span><span><strong>搜索索引</strong><small>管理本机历史搜索索引</small></span><span>›</span></button>
+          </div>
+        </section>
+
         <section class="settings-panel" data-settings-panel="about"><h3>关于 XiaoG</h3><div id="about-content" class="about-content"><p class="dialog-tip">正在读取产品信息…</p></div></section>
         <section class="settings-panel" data-settings-panel="system"><h3>系统</h3><form id="settings-form"><label>统一人格 / System Prompt<textarea id="system-prompt" rows="8"></textarea></label><label>用户资料（可选）<textarea id="user-profile" rows="5" placeholder="例如：我是历史学本科生，偏好中文解释。"></textarea></label><p class="dialog-tip">这些内容保存在本机 SQLite 数据库，不会写入 Provider 代码。</p><div class="dialog-actions"><button type="submit">保存设置</button></div></form></section>
       </div>
     </div>
   </dialog>
+
+  <template id="image-card-template"><article class="rich-card image-card" data-rich-type="image"><div class="rich-card-preview">▧</div><div><strong>图片内容</strong><p>图片展示能力预留</p></div><span class="phase-badge">预留</span></article></template>
+  <template id="video-card-template"><article class="rich-card video-card" data-rich-type="video"><div class="rich-card-preview video-preview">▶</div><div><strong>视频内容</strong><p>视频搜索与播放能力将在后续阶段接入</p></div><span class="phase-badge">预留</span></article></template>
+  <template id="file-card-template"><article class="rich-card file-card" data-rich-type="file"><div class="rich-card-preview">▤</div><div><strong>文件内容</strong><p>文件生成与处理能力预留</p></div><span class="phase-badge">预留</span></article></template>
+  <template id="artifact-card-template"><article class="rich-card artifact-card" data-rich-type="artifact"><div class="rich-card-preview">◇</div><div><strong>Artifact</strong><p>可交互内容入口预留</p></div><span class="phase-badge">预留</span></article></template>
+  <template id="tool-result-card-template"><article class="rich-card tool-result-card" data-rich-type="tool_result"><div class="rich-card-preview">✓</div><div><strong>工具结果</strong><p>工具执行结果入口预留</p></div><span class="phase-badge">预留</span></article></template>
+  <script src="/static/notification_service.js"></script>
   <script src="/static/app.js"></script>
 </body>
 </html>

@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.config import settings
 from backend.database.db import initialize_database
 from backend.database.models import ChatRequest, ConversationCreate, ConversationTitleUpdate, SettingsUpdate
+from backend.database.models import PersonalizationSettingsUpdate
 from backend.pricing import estimate_deepseek_cost
 from backend.providers.base import ProviderError
 from backend.router.model_router import model_router
@@ -81,8 +82,8 @@ async def provider_status() -> dict:
 
 
 @app.get("/api/conversations")
-async def list_conversations(archived: bool = False) -> list[dict]:
-    return conversation_service.list_conversations(archived=archived)
+async def list_conversations(archived: bool = False, deleted: bool = False) -> list[dict]:
+    return conversation_service.list_conversations(archived=archived, deleted=deleted)
 
 
 @app.post("/api/conversations", status_code=201)
@@ -109,8 +110,40 @@ async def get_conversation(conversation_id: str) -> dict:
 
 @app.delete("/api/conversations/{conversation_id}", status_code=204)
 async def delete_conversation(conversation_id: str) -> None:
-    if not conversation_service.delete_conversation(conversation_id):
-        raise HTTPException(status_code=404, detail="找不到该会话。")
+    if not conversation_service.move_to_trash(conversation_id):
+        raise HTTPException(status_code=404, detail="找不到可移入回收站的会话。")
+
+
+@app.post("/api/conversations/{conversation_id}/pin")
+async def pin_conversation(conversation_id: str) -> dict:
+    if not conversation_service.pin_conversation(conversation_id):
+        raise HTTPException(status_code=404, detail="找不到可置顶的会话。")
+    return {"message": "会话已置顶。"}
+
+
+@app.post("/api/conversations/{conversation_id}/unpin")
+async def unpin_conversation(conversation_id: str) -> dict:
+    if not conversation_service.unpin_conversation(conversation_id):
+        raise HTTPException(status_code=404, detail="找不到可取消置顶的会话。")
+    return {"message": "已取消置顶。"}
+
+
+@app.post("/api/conversations/{conversation_id}/restore-deleted")
+async def restore_deleted_conversation(conversation_id: str) -> dict:
+    if not conversation_service.restore_from_trash(conversation_id):
+        raise HTTPException(status_code=404, detail="找不到可恢复的会话。")
+    return {"message": "会话已恢复。"}
+
+
+@app.delete("/api/conversations/{conversation_id}/permanent", status_code=204)
+async def permanently_delete_conversation(conversation_id: str) -> None:
+    if not conversation_service.permanently_delete_conversation(conversation_id):
+        raise HTTPException(status_code=404, detail="找不到可永久删除的会话。")
+
+
+@app.delete("/api/trash")
+async def empty_trash() -> dict:
+    return {"deleted": conversation_service.empty_trash()}
 
 
 @app.post("/api/conversations/{conversation_id}/archive")
@@ -136,11 +169,24 @@ async def update_settings(payload: SettingsUpdate) -> dict:
     return {"message": "设置已保存。"}
 
 
+@app.get("/api/settings/personalization")
+async def get_personalization_settings() -> dict:
+    return conversation_service.get_personalization_settings()
+
+
+@app.put("/api/settings/personalization")
+async def update_personalization_settings(payload: PersonalizationSettingsUpdate) -> dict:
+    conversation_service.update_personalization_settings(payload.model_dump())
+    return conversation_service.get_personalization_settings()
+
+
 @app.post("/api/conversations/{conversation_id}/chat")
 async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
     conversation = conversation_service.get_conversation(conversation_id)
     if not conversation:
         raise HTTPException(status_code=404, detail="找不到该会话。")
+    if conversation.get("deleted_at"):
+        raise HTTPException(status_code=409, detail="请先从回收站恢复该会话后再继续聊天。")
     if conversation.get("archived_at"):
         raise HTTPException(status_code=409, detail="请先恢复已归档会话后再继续聊天。")
     content = payload.content.strip()

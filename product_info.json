@@ -1,12 +1,22 @@
 {
   "name": "XiaoG",
-  "version": "v0.3.1",
-  "commit": "0ebf57d3d646701da8258000969a47909575929b",
-  "phase": "Phase 4.5-B1",
+  "version": "0.3.3",
+  "phase": "Phase 4.5-B3",
   "models": ["DeepSeek", "GPT-5.6 Terra"],
-  "capabilities": ["对话", "流式输出", "历史会话", "多模型切换", "Terra 长期 App Server"],
+  "capabilities": [
+    "对话与流式输出",
+    "本机 SQLite 历史、置顶、归档与回收站",
+    "历史会话标题搜索",
+    "DeepSeek 与 GPT-5.6 Terra 手动切换",
+    "Terra 长期 Codex App Server 与同会话 thread 复用",
+    "主题、配色、头像与显示设置",
+    "安全链接渲染",
+    "基础通知与富内容卡片 UI 结构"
+  ],
   "changelog": [
-    {"version": "v0.3.1", "title": "Terra persistent App Server baseline", "items": ["Terra 复用长期运行的 Codex App Server", "同一会话复用 Codex thread", "Terra 热启动响应优化"]},
-    {"version": "v0.3.0", "title": "Phase 4 UX improvement baseline", "items": ["归档会话", "Terra 推理档位", "固定侧栏与消息区滚动"]}
+    {"version": "0.3.3", "title": "Phase 4.5-B3 product experience baseline", "items": ["统一设置、显示偏好与通知反馈", "新聊天欢迎页与头像体验优化", "安全链接渲染与图片、视频、文件卡片结构（UI 预留）"]},
+    {"version": "0.3.2", "title": "Phase 4.5-B1 product experience baseline", "items": ["设置与关于页面", "历史搜索、侧栏收缩和滚动位置恢复", "会话标题与 Header 布局优化"]},
+    {"version": "0.3.1", "title": "Terra persistent App Server baseline", "items": ["Terra 复用长期运行的 Codex App Server", "同一会话复用 Codex thread", "Terra 热启动响应优化"]},
+    {"version": "0.3.0", "title": "Phase 4 UX improvement baseline", "items": ["归档会话", "Terra 推理档位", "固定侧栏与消息区滚动"]}
   ]
 }

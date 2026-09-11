@@ -93,7 +93,16 @@ def initialize_database() -> None:
             conn.execute("ALTER TABLE conversations ADD COLUMN codex_thread_id TEXT")
         if "codex_last_synced_message_id" not in conversation_columns:
             conn.execute("ALTER TABLE conversations ADD COLUMN codex_last_synced_message_id TEXT")
+        if "is_pinned" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0")
+        if "pinned_at" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN pinned_at TEXT")
+        if "deleted_at" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN deleted_at TEXT")
+        if "deleted_from" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN deleted_from TEXT")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_archived_updated ON conversations(archived_at, updated_at DESC)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_state ON conversations(deleted_at, archived_at, is_pinned DESC, pinned_at DESC, updated_at DESC)")
         conn.execute(
             "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
             ("system_prompt", DEFAULT_SYSTEM_PROMPT, now_iso()),
@@ -102,3 +111,28 @@ def initialize_database() -> None:
             "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
             ("user_profile", "", now_iso()),
         )
+        # Additive defaults for the extensible, local user-preferences store.
+        # Existing databases keep all settings and conversation data intact.
+        conn.execute(
+            "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
+            ("theme_mode", "light", now_iso()),
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
+            ("color_scheme", "green", now_iso()),
+        )
+        for key, value in (
+            ("assistant_avatar", "default"),
+            ("user_avatar", "default"),
+            ("font_scale", "standard"),
+            ("default_model", "deepseek"),
+            ("reasoning_preference", "balanced"),
+            ("chat_density", "comfortable"),
+            ("show_message_time", "true"),
+            ("enter_to_send", "true"),
+            ("animations_enabled", "true"),
+        ):
+            conn.execute(
+                "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
+                (key, value, now_iso()),
+            )
