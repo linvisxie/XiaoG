@@ -54,7 +54,7 @@ class DeepSeekProvider(ModelProvider):
             return "DeepSeek服务暂时不可用，请稍后重试。"
         return "DeepSeek连接失败，请检查网络、API配置或稍后重试。"
 
-    async def stream_chat(self, messages: list[dict[str, str]]) -> AsyncIterator[dict]:
+    async def stream_chat(self, messages: list[dict[str, str]], reasoning_effort: str | None = None) -> AsyncIterator[dict]:
         url = f"{settings.deepseek_base_url}/chat/completions"
         timeout = httpx.Timeout(connect=15.0, read=180.0, write=30.0, pool=30.0)
         try:
@@ -88,11 +88,11 @@ class DeepSeekProvider(ModelProvider):
         except httpx.RequestError as exc:
             raise ProviderError("DeepSeek连接失败，请检查网络或API配置。") from exc
 
-    async def send_message(self, messages: list[dict[str, str]]) -> dict:
+    async def send_message(self, messages: list[dict[str, str]], reasoning_effort: str | None = None) -> dict:
         text = ""
         usage = None
         model = settings.deepseek_model_id
-        async for event in self.stream_chat(messages):
+        async for event in self.stream_chat(messages, reasoning_effort):
             if event["type"] == "delta":
                 text += event["content"]
             elif event["type"] == "usage":

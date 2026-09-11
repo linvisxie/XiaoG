@@ -10,20 +10,40 @@ class ConversationService:
     def create_conversation(self, title: str | None = None) -> dict:
         conversation_id = str(uuid4())
         timestamp = now_iso()
-        record = {"id": conversation_id, "title": (title or "新对话").strip()[:120] or "新对话", "created_at": timestamp, "updated_at": timestamp}
+        record = {"id": conversation_id, "title": (title or "新对话").strip()[:120] or "新对话", "created_at": timestamp, "updated_at": timestamp, "archived_at": None}
         with get_connection() as conn:
-            conn.execute("INSERT INTO conversations(id, title, created_at, updated_at) VALUES (?, ?, ?, ?)", tuple(record.values()))
+            conn.execute("INSERT INTO conversations(id, title, created_at, updated_at, archived_at) VALUES (?, ?, ?, ?, ?)", tuple(record.values()))
         return record
 
-    def list_conversations(self) -> list[dict]:
+    def list_conversations(self, archived: bool = False) -> list[dict]:
+        archived_clause = "IS NOT NULL" if archived else "IS NULL"
         with get_connection() as conn:
-            rows = conn.execute("SELECT id, title, created_at, updated_at FROM conversations ORDER BY updated_at DESC").fetchall()
+            rows = conn.execute(
+                f"SELECT id, title, created_at, updated_at, archived_at FROM conversations "
+                f"WHERE archived_at {archived_clause} ORDER BY updated_at DESC"
+            ).fetchall()
         return [dict(row) for row in rows]
 
     def get_conversation(self, conversation_id: str) -> dict | None:
         with get_connection() as conn:
-            row = conn.execute("SELECT id, title, created_at, updated_at FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+            row = conn.execute("SELECT id, title, created_at, updated_at, archived_at FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
         return dict(row) if row else None
+
+    def archive_conversation(self, conversation_id: str) -> bool:
+        with get_connection() as conn:
+            result = conn.execute(
+                "UPDATE conversations SET archived_at = ? WHERE id = ? AND archived_at IS NULL",
+                (now_iso(), conversation_id),
+            )
+        return result.rowcount > 0
+
+    def restore_conversation(self, conversation_id: str) -> bool:
+        with get_connection() as conn:
+            result = conn.execute(
+                "UPDATE conversations SET archived_at = NULL WHERE id = ? AND archived_at IS NOT NULL",
+                (conversation_id,),
+            )
+        return result.rowcount > 0
 
     def delete_conversation(self, conversation_id: str) -> bool:
         with get_connection() as conn:

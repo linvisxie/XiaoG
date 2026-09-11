@@ -85,6 +85,11 @@ def initialize_database() -> None:
         CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at);
         CREATE INDEX IF NOT EXISTS idx_usage_conversation_created ON model_usage(conversation_id, created_at);
         """)
+        # Additive migration: never recreate or clear the user's SQLite database.
+        conversation_columns = {row["name"] for row in conn.execute("PRAGMA table_info(conversations)").fetchall()}
+        if "archived_at" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN archived_at TEXT")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_archived_updated ON conversations(archived_at, updated_at DESC)")
         conn.execute(
             "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
             ("system_prompt", DEFAULT_SYSTEM_PROMPT, now_iso()),

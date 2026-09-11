@@ -9,25 +9,37 @@
 <body>
   <div class="app-shell">
     <aside class="sidebar" aria-label="会话列表">
-      <div class="brand"><span class="brand-mark">G</span><span>小G</span></div>
-      <button id="new-chat" class="new-chat">＋ 新建会话</button>
-      <div id="conversation-list" class="conversation-list"></div>
-      <button id="open-settings" class="settings-button">⚙ 设置</button>
+      <div class="sidebar-main">
+        <div class="brand"><span class="brand-mark">G</span><span>小G</span></div>
+        <button id="new-chat" class="new-chat"><span>新聊天</span><span aria-hidden="true">+</span></button>
+        <div class="conversation-heading" id="conversation-heading">历史对话</div>
+        <div id="conversation-list" class="conversation-list"></div>
+      </div>
+      <div class="sidebar-bottom">
+        <button id="open-archived" class="sidebar-action">▣ <span>已归档</span></button>
+        <button id="open-settings" class="settings-button">⚙ <span>设置</span></button>
+      </div>
     </aside>
     <main class="chat-area">
       <header class="topbar">
-        <div><strong>小G</strong><span id="provider-note" class="provider-note">正在检查模型状态…</span></div>
-        <label class="model-select-label">模型
-          <select id="model-select" aria-label="选择模型">
-            <option value="auto">Auto</option>
-            <option value="deepseek">DeepSeek</option>
-            <option value="terra">GPT-5.6 Terra</option>
-          </select>
-        </label>
+        <div class="topbar-title"><strong>小G</strong><span id="provider-note" class="provider-note">正在检查模型状态…</span></div>
+        <div class="model-controls">
+          <label class="model-select-label">模型
+            <select id="model-select" aria-label="选择模型">
+              <option value="auto">Auto</option>
+              <option value="deepseek">DeepSeek</option>
+              <option value="terra">GPT-5.6 Terra</option>
+            </select>
+          </label>
+          <div id="terra-effort-control" class="terra-effort hidden" aria-label="Terra 推理档位">
+            <span class="effort-label">推理</span><div id="terra-effort-options" class="segmented-control" role="group" aria-label="Terra reasoning effort"></div>
+          </div>
+        </div>
       </header>
       <section id="messages" class="messages" aria-live="polite">
         <div class="empty-state"><div class="empty-logo">G</div><h1>你好，我是小G。</h1><p>我会把对话保存在你的电脑里。告诉我今天想一起完成什么？</p></div>
       </section>
+      <button id="back-to-bottom" class="back-to-bottom hidden" type="button" aria-label="回到底部">↓ 回到底部</button>
       <footer class="composer-wrap">
         <form id="chat-form" class="composer">
           <textarea id="message-input" rows="1" placeholder="给小G发消息…（Enter 发送，Shift+Enter 换行）" aria-label="消息内容"></textarea>

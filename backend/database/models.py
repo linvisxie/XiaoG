@@ -10,6 +10,7 @@ class ConversationCreate(BaseModel):
 class ChatRequest(BaseModel):
     content: str = Field(min_length=1, max_length=30000)
     model_preference: str = Field(default="auto", pattern="^(auto|deepseek|terra)$")
+    terra_reasoning_effort: str | None = Field(default=None, pattern="^(low|medium|high)$")
 
 
 class SettingsUpdate(BaseModel):

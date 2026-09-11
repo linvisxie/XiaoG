@@ -63,8 +63,8 @@ async def provider_status() -> dict:
 
 
 @app.get("/api/conversations")
-async def list_conversations() -> list[dict]:
-    return conversation_service.list_conversations()
+async def list_conversations(archived: bool = False) -> list[dict]:
+    return conversation_service.list_conversations(archived=archived)
 
 
 @app.post("/api/conversations", status_code=201)
@@ -86,6 +86,18 @@ async def delete_conversation(conversation_id: str) -> None:
         raise HTTPException(status_code=404, detail="找不到该会话。")
 
 
+@app.post("/api/conversations/{conversation_id}/archive")
+async def archive_conversation(conversation_id: str) -> dict:
+    if not conversation_service.archive_conversation(conversation_id):
+        raise HTTPException(status_code=404, detail="找不到可归档的会话。")
+    return {"message": "会话已归档。"}
+
+
+@app.post("/api/conversations/{conversation_id}/restore")
+async def restore_conversation(conversation_id: str) -> dict:
+    if not conversation_service.restore_conversation(conversation_id):
+        raise HTTPException(status_code=404, detail="找不到可恢复的会话。")
+    return {"message": "会话已恢复。"}
 @app.get("/api/settings")
 async def get_settings() -> dict:
     return {"system_prompt": conversation_service.get_setting("system_prompt"), "user_profile": conversation_service.get_setting("user_profile")}
@@ -99,8 +111,11 @@ async def update_settings(payload: SettingsUpdate) -> dict:
 
 @app.post("/api/conversations/{conversation_id}/chat")
 async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
-    if not conversation_service.get_conversation(conversation_id):
+    conversation = conversation_service.get_conversation(conversation_id)
+    if not conversation:
         raise HTTPException(status_code=404, detail="找不到该会话。")
+    if conversation.get("archived_at"):
+        raise HTTPException(status_code=409, detail="请先恢复已归档会话后再继续聊天。")
     content = payload.content.strip()
     if not content:
         raise HTTPException(status_code=422, detail="消息不能为空。")
@@ -123,8 +138,8 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
             profile = memory_service.get_user_profile()
             memories = memory_service.get_relevant_memories(content)
             model_messages = conversation_service.build_model_messages(conversation_id, system_prompt, profile, memories)
-            yield event_stream("meta", {"provider": provider.name, "model": actual_model, "display_name": display_name})
-            async for item in provider.stream_chat(model_messages):
+            yield event_stream("meta", {"provider": provider.name, "model": actual_model, "display_name": display_name, "reasoning_effort": payload.terra_reasoning_effort if payload.model_preference == "terra" else None})
+            async for item in provider.stream_chat(model_messages, payload.terra_reasoning_effort):
                 if item["type"] == "delta":
                     answer += item["content"]
                     yield event_stream("delta", {"content": item["content"]})

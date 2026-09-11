@@ -36,11 +36,14 @@ class TerraProvider(ModelProvider):
             return ProviderStatus(self.name, False, str(exc), [], {"auth": "unavailable"})
 
         account_data = account.get("account") or {}
-        model_available = any(item.get("id") == TERRA_MODEL_ID and not item.get("hidden", False) for item in models)
+        model = self._terra_model(models)
+        model_available = model is not None
         details = {
             "auth_mode": account_data.get("type"),
             "plan_type": account_data.get("planType"),
             "rate_limits": self._sanitize_rate_limits(rate_limits),
+            "supported_reasoning_efforts": self._supported_efforts(model),
+            "default_reasoning_effort": (model or {}).get("defaultReasoningEffort"),
         }
         if account_data.get("type") != "chatgpt":
             return ProviderStatus(self.name, False, "ChatGPT 登录已失效，请在官方 Codex 中重新登录。", models, details)
@@ -52,14 +55,19 @@ class TerraProvider(ModelProvider):
         _account, models, _rate_limits = await self._discover()
         return models
 
-    async def stream_chat(self, messages: list[dict[str, str]]) -> AsyncIterator[dict[str, Any]]:
+    async def stream_chat(self, messages: list[dict[str, str]], reasoning_effort: str | None = None) -> AsyncIterator[dict[str, Any]]:
         async with CodexAppServerClient() as client:
             account = await client.request("account/read", {"refreshToken": False})
             if (account.get("account") or {}).get("type") != "chatgpt":
                 raise ProviderError("ChatGPT 登录已失效，请在官方 Codex 中重新登录。")
             models_result = await client.request("model/list", {"limit": 100, "includeHidden": False})
-            if not any(item.get("id") == TERRA_MODEL_ID and not item.get("hidden", False) for item in models_result.get("data") or []):
+            model = self._terra_model(models_result.get("data") or [])
+            if not model:
                 raise ProviderError("当前账户未提供 GPT-5.6 Terra")
+            supported_efforts = self._supported_efforts(model)
+            effort = reasoning_effort or model.get("defaultReasoningEffort")
+            if effort not in supported_efforts:
+                raise ProviderError("当前账户不支持所选的 Terra 推理档位，请刷新页面后重试。")
 
             thread_result = await client.request("thread/start", {
                 "model": TERRA_MODEL_ID,
@@ -75,6 +83,7 @@ class TerraProvider(ModelProvider):
                 "threadId": thread_id,
                 "input": [{"type": "text", "text": build_canonical_context(messages)}],
                 "model": TERRA_MODEL_ID,
+                "effort": effort,
             })
             turn = turn_result.get("turn") or {}
             turn_id = turn.get("id")
@@ -97,9 +106,9 @@ class TerraProvider(ModelProvider):
             if not completed:
                 raise ProviderError("Terra 未完成回复。")
 
-    async def send_message(self, messages: list[dict[str, str]]) -> dict[str, Any]:
+    async def send_message(self, messages: list[dict[str, str]], reasoning_effort: str | None = None) -> dict[str, Any]:
         content = ""
-        async for event in self.stream_chat(messages):
+        async for event in self.stream_chat(messages, reasoning_effort):
             if event["type"] == "delta":
                 content += event["content"]
         return {"content": content, "usage": None, "model": TERRA_MODEL_ID}
@@ -127,3 +136,14 @@ class TerraProvider(ModelProvider):
             }
             for key, value in groups.items()
         }
+    @staticmethod
+    def _terra_model(models: list[dict[str, Any]]) -> dict[str, Any] | None:
+        return next((item for item in models if item.get("id") == TERRA_MODEL_ID and not item.get("hidden", False)), None)
+
+    @staticmethod
+    def _supported_efforts(model: dict[str, Any] | None) -> list[str]:
+        return [
+            item["reasoningEffort"]
+            for item in (model or {}).get("supportedReasoningEfforts") or []
+            if isinstance(item.get("reasoningEffort"), str)
+        ]
