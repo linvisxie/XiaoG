@@ -1,0 +1,24 @@
+# Secrets and local Python runtime
+.env
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local data and logs (keep the folders via .gitkeep)
+data/*.db
+data/*.sqlite*
+data/logs/*.log
+data/backups/
+
+# Editor and operating-system files
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Local test runtime; project setup uses a normal Python-created .venv
+tools/python/
+tools/*.exe
+tools/*.zip
+tools/get-pip.py
+tools/python-install*.log
