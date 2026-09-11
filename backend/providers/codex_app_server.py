@@ -30,6 +30,8 @@ class CodexAppServerClient:
         await self.close()
 
     async def start(self) -> None:
+        if self.is_running:
+            return
         try:
             self._process = await asyncio.create_subprocess_exec(
                 "codex", "app-server",
@@ -44,6 +46,14 @@ class CodexAppServerClient:
             "clientInfo": {"name": "xiaog", "title": "XiaoG", "version": "0.1.0"},
         })
         await self.notify("initialized", {})
+
+    @property
+    def is_running(self) -> bool:
+        return bool(self._process and self._process.returncode is None)
+
+    @property
+    def process_id(self) -> int | None:
+        return self._process.pid if self.is_running and self._process else None
 
     async def close(self) -> None:
         if not self._process:

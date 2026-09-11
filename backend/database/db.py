@@ -89,6 +89,10 @@ def initialize_database() -> None:
         conversation_columns = {row["name"] for row in conn.execute("PRAGMA table_info(conversations)").fetchall()}
         if "archived_at" not in conversation_columns:
             conn.execute("ALTER TABLE conversations ADD COLUMN archived_at TEXT")
+        if "codex_thread_id" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN codex_thread_id TEXT")
+        if "codex_last_synced_message_id" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN codex_last_synced_message_id TEXT")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_archived_updated ON conversations(archived_at, updated_at DESC)")
         conn.execute(
             "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",

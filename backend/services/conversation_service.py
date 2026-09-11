@@ -10,23 +10,23 @@ class ConversationService:
     def create_conversation(self, title: str | None = None) -> dict:
         conversation_id = str(uuid4())
         timestamp = now_iso()
-        record = {"id": conversation_id, "title": (title or "新对话").strip()[:120] or "新对话", "created_at": timestamp, "updated_at": timestamp, "archived_at": None}
+        record = {"id": conversation_id, "title": (title or "新对话").strip()[:120] or "新对话", "created_at": timestamp, "updated_at": timestamp, "archived_at": None, "codex_thread_id": None, "codex_last_synced_message_id": None}
         with get_connection() as conn:
-            conn.execute("INSERT INTO conversations(id, title, created_at, updated_at, archived_at) VALUES (?, ?, ?, ?, ?)", tuple(record.values()))
+            conn.execute("INSERT INTO conversations(id, title, created_at, updated_at, archived_at, codex_thread_id, codex_last_synced_message_id) VALUES (?, ?, ?, ?, ?, ?, ?)", tuple(record.values()))
         return record
 
     def list_conversations(self, archived: bool = False) -> list[dict]:
         archived_clause = "IS NOT NULL" if archived else "IS NULL"
         with get_connection() as conn:
             rows = conn.execute(
-                f"SELECT id, title, created_at, updated_at, archived_at FROM conversations "
+                f"SELECT id, title, created_at, updated_at, archived_at, codex_thread_id, codex_last_synced_message_id FROM conversations "
                 f"WHERE archived_at {archived_clause} ORDER BY updated_at DESC"
             ).fetchall()
         return [dict(row) for row in rows]
 
     def get_conversation(self, conversation_id: str) -> dict | None:
         with get_connection() as conn:
-            row = conn.execute("SELECT id, title, created_at, updated_at, archived_at FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
+            row = conn.execute("SELECT id, title, created_at, updated_at, archived_at, codex_thread_id, codex_last_synced_message_id FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
         return dict(row) if row else None
 
     def archive_conversation(self, conversation_id: str) -> bool:
@@ -49,6 +49,27 @@ class ConversationService:
         with get_connection() as conn:
             result = conn.execute("DELETE FROM conversations WHERE id = ?", (conversation_id,))
         return result.rowcount > 0
+
+    def set_codex_thread(self, conversation_id: str, thread_id: str) -> None:
+        with get_connection() as conn:
+            conn.execute("UPDATE conversations SET codex_thread_id = ? WHERE id = ?", (thread_id, conversation_id))
+
+    def clear_codex_thread(self, conversation_id: str) -> None:
+        with get_connection() as conn:
+            conn.execute("UPDATE conversations SET codex_thread_id = NULL, codex_last_synced_message_id = NULL WHERE id = ?", (conversation_id,))
+
+    def set_codex_last_synced_message(self, conversation_id: str, message_id: str) -> None:
+        with get_connection() as conn:
+            conn.execute("UPDATE conversations SET codex_last_synced_message_id = ? WHERE id = ?", (message_id, conversation_id))
+
+    def messages_after(self, conversation_id: str, message_id: str | None) -> list[dict]:
+        messages = self.list_messages(conversation_id)
+        if not message_id:
+            return messages
+        for index, message in enumerate(messages):
+            if message["id"] == message_id:
+                return messages[index + 1:]
+        return messages
 
     def list_messages(self, conversation_id: str) -> list[dict]:
         with get_connection() as conn:

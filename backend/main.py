@@ -17,6 +17,7 @@ from backend.database.models import ChatRequest, ConversationCreate, SettingsUpd
 from backend.pricing import estimate_deepseek_cost
 from backend.providers.base import ProviderError
 from backend.router.model_router import model_router
+from backend.services.codex_app_server_manager import codex_app_server_manager
 from backend.services.conversation_service import conversation_service
 from backend.services.memory_service import memory_service
 
@@ -35,7 +36,15 @@ async def lifespan(_app: FastAPI):
     configure_logging()
     initialize_database()
     logging.getLogger(__name__).info("XiaoG database initialized")
-    yield
+    try:
+        await codex_app_server_manager.start()
+    except ProviderError as exc:
+        # DeepSeek remains usable if Codex is unavailable at application boot.
+        logging.getLogger(__name__).warning("Codex App Server was not ready at startup: %s", exc)
+    try:
+        yield
+    finally:
+        await codex_app_server_manager.close()
 
 
 app = FastAPI(title="XiaoG", version="0.1.0", lifespan=lifespan)
@@ -119,7 +128,7 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
     content = payload.content.strip()
     if not content:
         raise HTTPException(status_code=422, detail="消息不能为空。")
-    conversation_service.add_message(conversation_id, "user", content)
+    user_message = conversation_service.add_message(conversation_id, "user", content)
     conversation_service.set_title_from_first_message(conversation_id, content)
 
     async def generate():
@@ -139,7 +148,17 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
             memories = memory_service.get_relevant_memories(content)
             model_messages = conversation_service.build_model_messages(conversation_id, system_prompt, profile, memories)
             yield event_stream("meta", {"provider": provider.name, "model": actual_model, "display_name": display_name, "reasoning_effort": payload.terra_reasoning_effort if payload.model_preference == "terra" else None})
-            async for item in provider.stream_chat(model_messages, payload.terra_reasoning_effort):
+            stream = (
+                provider.stream_chat(
+                    model_messages,
+                    payload.terra_reasoning_effort,
+                    conversation_id=conversation_id,
+                    user_message_id=user_message["id"],
+                )
+                if provider.name == "openai_codex"
+                else provider.stream_chat(model_messages, payload.terra_reasoning_effort)
+            )
+            async for item in stream:
                 if item["type"] == "delta":
                     answer += item["content"]
                     yield event_stream("delta", {"content": item["content"]})
