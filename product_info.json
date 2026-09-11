@@ -1,12 +1,12 @@
 {
   "name": "XiaoG",
-  "version": "0.3.3",
-  "phase": "Phase 4.5-B3",
+  "version": "0.3.5",
+  "phase": "Phase 4.5-B3 Global Search v1 Completion",
   "models": ["DeepSeek", "GPT-5.6 Terra"],
   "capabilities": [
     "对话与流式输出",
     "本机 SQLite 历史、置顶、归档与回收站",
-    "历史会话标题搜索",
+    "全局会话搜索（标题、用户消息、AI消息与定位）",
     "DeepSeek 与 GPT-5.6 Terra 手动切换",
     "Terra 长期 Codex App Server 与同会话 thread 复用",
     "主题、配色、头像与显示设置",
@@ -14,6 +14,7 @@
     "基础通知与富内容卡片 UI 结构"
   ],
   "changelog": [
+    {"version": "0.3.5", "title": "Global Search v1 completion", "items": ["统一 Search Service 入口", "会话标题、用户消息与 AI 消息搜索", "搜索结果可直接定位匹配消息"]},
     {"version": "0.3.3", "title": "Phase 4.5-B3 product experience baseline", "items": ["统一设置、显示偏好与通知反馈", "新聊天欢迎页与头像体验优化", "安全链接渲染与图片、视频、文件卡片结构（UI 预留）"]},
     {"version": "0.3.2", "title": "Phase 4.5-B1 product experience baseline", "items": ["设置与关于页面", "历史搜索、侧栏收缩和滚动位置恢复", "会话标题与 Header 布局优化"]},
     {"version": "0.3.1", "title": "Terra persistent App Server baseline", "items": ["Terra 复用长期运行的 Codex App Server", "同一会话复用 Codex thread", "Terra 热启动响应优化"]},

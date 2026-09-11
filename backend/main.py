@@ -7,7 +7,7 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -21,6 +21,7 @@ from backend.router.model_router import model_router
 from backend.services.codex_app_server_manager import codex_app_server_manager
 from backend.services.conversation_service import conversation_service
 from backend.services.memory_service import memory_service
+from backend.services.search_service import search_service
 
 
 def configure_logging() -> None:
@@ -85,6 +86,12 @@ async def provider_status() -> dict:
 async def list_conversations(archived: bool = False, deleted: bool = False) -> list[dict]:
     return conversation_service.list_conversations(archived=archived, deleted=deleted)
 
+
+@app.get("/api/search")
+async def search(query: str = Query(default="", max_length=120)) -> dict:
+    """Search XiaoG-owned data through the shared Search Service."""
+    result = search_service.search(query)
+    return {"query": " ".join(query.split()), "results": result["conversations"]}
 
 @app.post("/api/conversations", status_code=201)
 async def create_conversation(payload: ConversationCreate) -> dict:

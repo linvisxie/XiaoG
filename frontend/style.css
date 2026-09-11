@@ -197,3 +197,14 @@ input:disabled,textarea:disabled,select:disabled { cursor:not-allowed;opacity:.6
   .settings-tab { width:auto;white-space:nowrap; }
   .settings-content { padding:20px; }
 }
+/* Global Search v1 */
+.search-result { width:100%;display:flex;flex-direction:column;gap:5px;margin:3px 0;padding:10px 11px;border:1px solid transparent;border-radius:var(--radius-sm);background:transparent;color:var(--text);text-align:left; }
+.search-result:hover { border-color:var(--line);background:var(--hover);color:var(--text); }
+.search-result-title { overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:calc(13px * var(--font-scale)); }
+.search-result-meta { display:flex;align-items:center;gap:6px;font-size:calc(10px * var(--font-scale));font-weight:700; }
+.search-result-kind,.search-result-archived { display:inline-flex;align-items:center;padding:2px 6px;border-radius:999px;background:var(--accent-soft);color:var(--accent-strong); }
+.search-result-archived { background:var(--hover);color:var(--muted); }
+.search-result-snippet { display:-webkit-box;overflow:hidden;color:var(--muted);font-size:calc(12px * var(--font-scale));font-weight:500;line-height:1.45;-webkit-box-orient:vertical;-webkit-line-clamp:2; }
+.search-results-status { margin-top:5px; }
+.message.search-target .message-content { outline:2px solid var(--focus-border);outline-offset:3px;animation:search-message-highlight 1.8s ease-out; }
+@keyframes search-message-highlight { 0%,30% { background-color:var(--accent-soft); } 100% { background-color:transparent; } }

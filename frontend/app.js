@@ -9,7 +9,7 @@ const state = {
     default_model: "deepseek", reasoning_preference: "balanced", chat_density: "comfortable",
     show_message_time: true, enter_to_send: true, animations_enabled: true,
   },
-  personalizationSave: Promise.resolve(), menuConversation: null,
+  personalizationSave: Promise.resolve(), menuConversation: null, searchQuery: "", searchResults: [], searchLoading: false, searchRequestId: 0, searchTimer: null,
 };
 const $ = (selector) => document.querySelector(selector);
 const messagesEl = $("#messages"), inputEl = $("#message-input"), sendButton = $("#send-button"), stopButton = $("#stop-button"), modelSelect = $("#model-select"), backToBottom = $("#back-to-bottom");
@@ -105,7 +105,7 @@ function setExecutionState(article, executionState, retryPrompt = "") {
   if (executionState === "failed") { const again = document.createElement("button"); again.type = "button"; again.textContent = "Again"; again.onclick = () => sourcePromptAllowed() && sendMessage(retryPrompt); status.append(again); }
 }
 function messageElement(message, streaming = false, sourcePrompt = "") {
-  const article = document.createElement("article"); article.className = `message ${message.role}${streaming ? " streaming" : ""}`;
+  const article = document.createElement("article"); article.className = `message ${message.role}${streaming ? " streaming" : ""}`; article.tabIndex = -1; if (message.id) article.dataset.messageId = message.id;
   const avatar = document.createElement("div"); applyAvatarElement(avatar, message.role);
   const body = document.createElement("div"); body.className = "message-body"; const meta = document.createElement("div"); meta.className = "message-meta";
   const author = document.createElement("span"); author.textContent = message.role === "assistant" ? "小G" : "你"; const timestamp = document.createElement("time"); timestamp.className = "message-time"; timestamp.dateTime = message.created_at || new Date().toISOString(); timestamp.textContent = formatMessageTime(message.created_at); meta.append(author, timestamp);
@@ -129,22 +129,72 @@ function openConversationMenu(conversation, x, y) {
   else { menu.append(menuButton("恢复", () => restoreDeletedConversation(conversation.id))); menu.append(menuButton("永久删除", () => permanentlyDelete(conversation), true)); }
   menu.classList.remove("hidden"); const bounds = menu.getBoundingClientRect(); menu.style.left = `${Math.max(8, Math.min(x, window.innerWidth - bounds.width - 10))}px`; menu.style.top = `${Math.max(8, Math.min(y, window.innerHeight - bounds.height - 10))}px`;
 }
+function searchMatchLabel(type) { return { title: "标题", user_message: "用户消息", assistant_message: "AI 消息" }[type] || "会话"; }
+function renderSearchResults(target) {
+  if (state.searchLoading) { const note = document.createElement("p"); note.className = "conversation-empty search-results-status"; note.textContent = "正在搜索…"; target.append(note); return; }
+  for (const result of state.searchResults) {
+    const item = document.createElement("button"); item.type = "button"; item.className = "search-result"; item.dataset.conversationId = result.conversation_id; if (result.message_id) item.dataset.messageId = result.message_id; item.title = `打开“${result.conversation_title}”`;
+    const title = document.createElement("strong"); title.className = "search-result-title"; title.textContent = result.conversation_title;
+    const meta = document.createElement("span"); meta.className = "search-result-meta";
+    const kind = document.createElement("span"); kind.className = "search-result-kind"; kind.textContent = searchMatchLabel(result.match_type); meta.append(kind);
+    if (result.is_archived) { const archived = document.createElement("span"); archived.className = "search-result-archived"; archived.textContent = "已归档"; meta.append(archived); }
+    item.append(title, meta);
+    if (result.snippet) { const snippet = document.createElement("span"); snippet.className = "search-result-snippet"; snippet.textContent = result.snippet; item.append(snippet); }
+    item.onclick = () => openSearchResult(result).catch((error) => notify(error.message || "无法打开搜索结果", "error"));
+    target.append(item);
+  }
+  if (!state.searchResults.length) { const note = document.createElement("p"); note.className = "conversation-empty search-results-status"; note.textContent = "没有匹配的会话或消息"; target.append(note); }
+}
 function renderConversationList() {
-  const query = $("#history-search").value.trim().toLocaleLowerCase(), list = state.conversations.filter((conversation) => !query || conversation.title.toLocaleLowerCase().includes(query)), target = $("#conversation-list"); target.innerHTML = "";
-  const headings = { active: "历史对话", archived: "已归档", trash: "回收站" }; $("#conversation-heading").textContent = headings[state.view]; $("#open-archived").classList.toggle("active", state.view === "archived"); $("#open-trash").classList.toggle("active", state.view === "trash"); $("#back-to-history").classList.toggle("hidden", state.view === "active"); $("#empty-trash").classList.toggle("hidden", state.view !== "trash" || !state.conversations.length);
-  for (const conversation of list) {
+  const target = $("#conversation-list"); target.innerHTML = "";
+  const headings = { active: "历史对话", archived: "已归档", trash: "回收站" }, searching = Boolean(state.searchQuery);
+  $("#conversation-heading").textContent = searching ? "搜索结果" : headings[state.view]; $("#open-archived").classList.toggle("active", state.view === "archived" && !searching); $("#open-trash").classList.toggle("active", state.view === "trash" && !searching); $("#back-to-history").classList.toggle("hidden", state.view === "active" && !searching); $("#empty-trash").classList.toggle("hidden", state.view !== "trash" || !state.conversations.length || searching);
+  if (searching) { renderSearchResults(target); return; }
+  for (const conversation of state.conversations) {
     const item = document.createElement("div"); item.className = `conversation ${conversation.id === state.conversationId ? "active" : ""}`; item.oncontextmenu = (event) => { event.preventDefault(); openConversationMenu(conversation, event.clientX, event.clientY); };
     const open = document.createElement("button"); open.className = "conversation-name"; open.title = conversation.title;
     if (state.view === "active" && conversation.is_pinned) { const pin = document.createElement("span"); pin.className = "pin-mark"; pin.textContent = "◆"; pin.setAttribute("aria-label", "已置顶"); open.append(pin); }
     open.append(document.createTextNode(conversation.title)); open.onclick = () => openConversation(conversation.id);
     const more = document.createElement("button"); more.className = "conversation-more"; more.textContent = "⋯"; more.title = "更多操作"; more.setAttribute("aria-label", `${conversation.title}的更多操作`); more.onclick = (event) => { event.stopPropagation(); const rect = more.getBoundingClientRect(); openConversationMenu(conversation, rect.right, rect.bottom + 4); }; item.append(open, more); target.append(item);
   }
-  if (!list.length) { const note = document.createElement("p"); note.className = "conversation-empty"; note.textContent = query ? "没有匹配的会话" : state.view === "archived" ? "暂无已归档会话" : state.view === "trash" ? "回收站为空" : "暂无历史会话"; target.append(note); }
+  if (!state.conversations.length) { const note = document.createElement("p"); note.className = "conversation-empty"; note.textContent = state.view === "archived" ? "暂无已归档会话" : state.view === "trash" ? "回收站为空" : "暂无历史会话"; target.append(note); }
+}
+function clearGlobalSearch() {
+  clearTimeout(state.searchTimer); state.searchRequestId += 1; state.searchQuery = ""; state.searchResults = []; state.searchLoading = false; $("#history-search").value = "";
+}
+function scheduleGlobalSearch() {
+  const query = $("#history-search").value.trim(), requestId = ++state.searchRequestId; clearTimeout(state.searchTimer); state.searchQuery = query;
+  if (!query) { state.searchResults = []; state.searchLoading = false; renderConversationList(); return; }
+  state.searchLoading = true; renderConversationList();
+  state.searchTimer = window.setTimeout(async () => {
+    try {
+      const result = await request(`/api/search?query=${encodeURIComponent(query)}`);
+      if (requestId !== state.searchRequestId) return;
+      state.searchResults = result.results || [];
+    } catch (error) {
+      if (requestId !== state.searchRequestId) return;
+      state.searchResults = []; notify(error.message || "搜索失败", "error");
+    } finally {
+      if (requestId === state.searchRequestId) { state.searchLoading = false; renderConversationList(); }
+    }
+  }, 180);
+}
+async function openSearchResult(result) {
+  if (state.generating) return;
+  state.view = result.is_archived ? "archived" : "active";
+  await openConversation(result.conversation_id, result.message_id || null);
+}
+function locateMessage(messageId) {
+  const target = Array.from(messagesEl.querySelectorAll("[data-message-id]")).find((element) => element.dataset.messageId === messageId);
+  if (!target) { notify("未能定位匹配消息", "error"); restoreScrollPosition(state.conversationId); return; }
+  const top = target.getBoundingClientRect().top - messagesEl.getBoundingClientRect().top + messagesEl.scrollTop - 22;
+  messagesEl.scrollTo({ top: Math.max(0, top), behavior: "auto" }); state.autoScroll = false; syncScrollControls(); target.focus({ preventScroll: true }); target.classList.add("search-target"); window.setTimeout(() => target.classList.remove("search-target"), 1800);
 }
 async function refreshConversations() { const query = state.view === "archived" ? "archived=true" : state.view === "trash" ? "deleted=true" : ""; state.conversations = await request(`/api/conversations${query ? `?${query}` : ""}`); renderConversationList(); }
-function startDraft() { if (state.generating) return; rememberScrollPosition(); state.view = "active"; state.conversationId = null; state.conversationArchived = false; state.conversationDeleted = false; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle("新聊天"); setComposerRestricted(); refreshConversations().catch(console.error); inputEl.focus(); }
-async function openConversation(id) { if (state.generating) return; rememberScrollPosition(); const conversation = await request(`/api/conversations/${id}`); state.conversationId = id; state.conversationArchived = Boolean(conversation.archived_at); state.conversationDeleted = Boolean(conversation.deleted_at); renderMessages(conversation.messages); setHeaderTitle(conversation.title); setComposerRestricted(); await refreshConversations(); restoreScrollPosition(id); }
-async function showView(view) { if (state.generating) return; rememberScrollPosition(); state.view = view; state.conversationId = null; state.conversationArchived = view === "archived"; state.conversationDeleted = view === "trash"; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle(view === "archived" ? "已归档会话" : view === "trash" ? "回收站" : "新聊天"); setComposerRestricted(); await refreshConversations(); }
+function startDraft() { if (state.generating) return; rememberScrollPosition(); clearGlobalSearch(); state.view = "active"; state.conversationId = null; state.conversationArchived = false; state.conversationDeleted = false; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle("新聊天"); setComposerRestricted(); refreshConversations().catch(console.error); inputEl.focus(); }
+async function openConversation(id, targetMessageId = null) { if (state.generating) return; rememberScrollPosition(); const conversation = await request(`/api/conversations/${id}`); state.conversationId = id; state.conversationArchived = Boolean(conversation.archived_at); state.conversationDeleted = Boolean(conversation.deleted_at); renderMessages(conversation.messages); setHeaderTitle(conversation.title); setComposerRestricted(); await refreshConversations(); if (targetMessageId) locateMessage(targetMessageId); else restoreScrollPosition(id); }
+function showView(view) { if (state.generating) return; clearGlobalSearch(); return showConversationView(view); }
+async function showConversationView(view) { rememberScrollPosition(); state.view = view; state.conversationId = null; state.conversationArchived = view === "archived"; state.conversationDeleted = view === "trash"; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle(view === "archived" ? "已归档会话" : view === "trash" ? "回收站" : "新聊天"); setComposerRestricted(); await refreshConversations(); }
 async function setPinned(conversation, pinned) { await request(`/api/conversations/${conversation.id}/${pinned ? "pin" : "unpin"}`, { method: "POST" }); notify(pinned ? "会话已置顶" : "已取消置顶", "success"); await refreshConversations(); }
 async function renameConversation(conversation) { const title = prompt("修改会话标题", conversation.title); if (title === null || !title.trim()) return; const updated = await request(`/api/conversations/${conversation.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: title.trim() }) }); if (state.conversationId === conversation.id) setHeaderTitle(updated.title); notify("会话已重命名", "success"); await refreshConversations(); }
 async function archiveConversation(id) { await request(`/api/conversations/${id}/archive`, { method: "POST" }); notify("会话已归档", "success"); if (state.conversationId === id) startDraft(); else await refreshConversations(); }
@@ -281,7 +331,7 @@ inputEl.addEventListener("keydown", (event) => {
   const shouldSend = state.personalization.enter_to_send || event.ctrlKey || event.metaKey;
   if (shouldSend) { event.preventDefault(); $("#chat-form").requestSubmit(); }
 });
-$("#new-chat").onclick = startDraft; $("#open-archived").onclick = () => showView("archived"); $("#open-trash").onclick = () => showView("trash"); $("#back-to-history").onclick = startDraft; $("#empty-trash").onclick = emptyTrash; $("#history-search").addEventListener("input", renderConversationList); $("#sidebar-toggle").onclick = () => setSidebarCollapsed(!state.sidebarCollapsed); $("#edit-title").onclick = updateCurrentTitle; stopButton.onclick = () => state.abortController?.abort(); modelSelect.onchange = () => { syncTerraControl(); syncModelStatus(); };
+$("#new-chat").onclick = startDraft; $("#open-archived").onclick = () => showView("archived"); $("#open-trash").onclick = () => showView("trash"); $("#back-to-history").onclick = startDraft; $("#empty-trash").onclick = emptyTrash; $("#history-search").addEventListener("input", scheduleGlobalSearch); $("#sidebar-toggle").onclick = () => setSidebarCollapsed(!state.sidebarCollapsed); $("#edit-title").onclick = updateCurrentTitle; stopButton.onclick = () => state.abortController?.abort(); modelSelect.onchange = () => { syncTerraControl(); syncModelStatus(); };
 $("#open-settings").onclick = () => openSettings().catch((error) => notify(error.message || "设置加载失败", "error")); $("#close-settings").onclick = () => $("#settings-dialog").close(); document.querySelectorAll("[data-settings-tab]").forEach((tab) => tab.onclick = () => activateSettingsTab(tab.dataset.settingsTab));
 document.querySelectorAll('input[name="theme-mode"]').forEach((input) => input.onchange = () => choosePersonalization({ theme_mode: input.value }));
 document.querySelectorAll("#color-scheme-options [data-color-scheme]").forEach((button) => button.onclick = () => choosePersonalization({ color_scheme: button.dataset.colorScheme }));
