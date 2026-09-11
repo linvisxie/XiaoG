@@ -168,3 +168,32 @@ input:disabled,textarea:disabled,select:disabled { cursor:not-allowed;opacity:.6
   .rich-card { grid-template-columns:42px minmax(0,1fr); }
   .rich-card>.phase-badge { display:none; }
 }
+/* Phase 4.5-B3 UI polish: fixed settings chrome and rounded text focus. */
+#settings-dialog { overflow:hidden; }
+.settings-shell { display:grid;grid-template-rows:auto minmax(0,1fr);height:min(720px,calc(100vh - 40px));min-height:min(560px,calc(100vh - 40px)); }
+.settings-window-header { display:flex;align-items:center;justify-content:space-between;min-height:64px;padding:0 16px 0 22px;border-bottom:1px solid var(--line);background:var(--panel); }
+.settings-window-header h2 { margin:0;font-size:calc(20px * var(--font-scale)); }
+#close-settings { flex:0 0 auto;line-height:1; }
+.settings-layout { height:100%;min-height:0;max-height:none;grid-template-columns:196px minmax(0,1fr); }
+.settings-nav { min-height:0;overflow:hidden; }
+.settings-nav-list { display:grid;align-content:start;gap:3px; }
+.settings-tab-reserved { color:var(--muted);cursor:default;opacity:.62; }
+.settings-tab-reserved:hover { background:transparent;color:var(--muted); }
+.settings-content { min-height:0;overflow-y:auto;overscroll-behavior:contain; }
+
+/* Text-entry fields keep their rounded edge; controls retain keyboard focus feedback. */
+.history-search:focus-within { border-color:var(--focus-border);box-shadow:none; }
+.composer:focus-within { border-color:var(--focus-border);box-shadow:0 5px 22px var(--input-shadow); }
+.history-search input:focus,.history-search input:focus-visible,.composer textarea:focus,.composer textarea:focus-visible,.settings-panel textarea:focus,.settings-panel textarea:focus-visible,.settings-select:focus,.settings-select:focus-visible { outline:none;box-shadow:none; }
+.settings-panel textarea:focus,.settings-panel textarea:focus-visible,.settings-select:focus,.settings-select:focus-visible { border-color:var(--focus-border); }
+.select-card:has(input:focus-visible),.switch:has(input:focus-visible) span { outline:2px solid var(--focus-border);outline-offset:2px; }
+.message-content a:focus-visible { outline:2px solid var(--focus-border);outline-offset:2px;border-radius:4px; }
+
+@media (max-width:760px) {
+  .settings-shell { min-height:0;height:min(720px,calc(100vh - 24px)); }
+  .settings-layout { grid-template-columns:1fr; }
+  .settings-nav { display:block;padding:8px 12px;border-right:0;border-bottom:1px solid var(--line); }
+  .settings-nav-list { display:flex;gap:4px;overflow-x:auto; }
+  .settings-tab { width:auto;white-space:nowrap; }
+  .settings-content { padding:20px; }
+}

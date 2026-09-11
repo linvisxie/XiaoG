@@ -63,17 +63,27 @@
   <div id="notification-region" class="notification-region" aria-live="polite" aria-atomic="false"></div>
 
   <dialog id="settings-dialog" aria-label="小G 设置">
-    <div class="settings-layout">
-      <aside class="settings-nav" aria-label="设置分类">
-        <div class="dialog-heading"><h2>设置</h2><button type="button" class="icon-button" id="close-settings" aria-label="关闭">×</button></div>
-        <button class="settings-tab active" type="button" data-settings-tab="personalization">个性化</button>
-        <button class="settings-tab" type="button" data-settings-tab="intelligence">模型与智能</button>
-        <button class="settings-tab" type="button" data-settings-tab="application">应用设置</button>
-        <button class="settings-tab" type="button" data-settings-tab="privacy">数据与隐私</button>
-        <button class="settings-tab" type="button" data-settings-tab="about">关于</button>
-        <button class="settings-tab" type="button" data-settings-tab="system">系统</button>
-      </aside>
-      <div class="settings-content">
+    <div class="settings-shell">
+      <header class="settings-window-header">
+        <h2>设置</h2>
+        <button type="button" class="icon-button" id="close-settings" aria-label="关闭" title="关闭设置">×</button>
+      </header>
+      <div class="settings-layout">
+        <aside class="settings-nav" aria-label="设置分类">
+          <nav class="settings-nav-list">
+            <span class="settings-tab settings-tab-reserved" title="账户设置将在后续阶段开放">账户</span>
+            <button class="settings-tab active" type="button" data-settings-tab="personalization">个性化</button>
+            <button class="settings-tab" type="button" data-settings-tab="intelligence">模型与智能</button>
+            <span class="settings-tab settings-tab-reserved" title="记忆能力将在后续阶段开放">记忆</span>
+            <span class="settings-tab settings-tab-reserved" title="设备与工具将在后续阶段开放">设备与工具</span>
+            <button class="settings-tab" type="button" data-settings-tab="application">应用设置</button>
+            <button class="settings-tab" type="button" data-settings-tab="privacy">数据与隐私</button>
+            <button class="settings-tab" type="button" data-settings-tab="system">系统</button>
+            <span class="settings-tab settings-tab-reserved" title="帮助中心将在后续阶段开放">获取帮助</span>
+            <button class="settings-tab" type="button" data-settings-tab="about">关于小G</button>
+          </nav>
+        </aside>
+        <div class="settings-content">
         <section class="settings-panel active" data-settings-panel="personalization">
           <h3>个性化</h3>
           <div class="settings-group"><h4>模式</h4><div class="choice-row" role="radiogroup" aria-label="显示模式"><label class="select-card"><input type="radio" name="theme-mode" value="light" /> 原版模式</label><label class="select-card"><input type="radio" name="theme-mode" value="dark" /> 深色模式</label></div></div>
