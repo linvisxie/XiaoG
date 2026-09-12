@@ -100,6 +100,11 @@ async def search(query: str = Query(default="", max_length=120)) -> dict:
     result = search_service.search(query)
     return {"query": " ".join(query.split()), "results": result["conversations"]}
 
+
+@app.get("/api/conversations/default-model-settings")
+async def get_default_conversation_model_settings() -> dict:
+    return conversation_service.default_model_settings()
+
 @app.post("/api/conversations", status_code=201)
 async def create_conversation(payload: ConversationCreate) -> dict:
     return conversation_service.create_conversation(payload.title)

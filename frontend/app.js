@@ -1,5 +1,5 @@
 const state = {
-  conversationId: null, conversationArchived: false, conversationDeleted: false, view: "active",
+  conversationId: null, navigationRequestId: 0, conversationArchived: false, conversationDeleted: false, view: "active",
   abortController: null, generating: false, autoScroll: true, reasoningOptions: [], reasoningEffort: null,
   sidebarCollapsed: localStorage.getItem("xiaog.sidebarCollapsed") === "true",
   scrollPositions: new Map(), conversationModelSettings: null, conversations: [], currentMessages: [], currentTitle: "新聊天", providerStatus: null, modelRegistry: null,
@@ -8,7 +8,7 @@ const state = {
     default_model: "deepseek", reasoning_preference: "balanced", manual_reasoning_preferences: {}, chat_density: "comfortable",
     show_message_time: true, enter_to_send: true, animations_enabled: true, ui_language: "zh-CN",
   },
-  personalizationSave: Promise.resolve(), menuConversation: null, searchQuery: "", searchResults: [], searchLoading: false, searchRequestId: 0, searchTimer: null,
+  personalizationSave: Promise.resolve(), modelSettingsSave: { conversationId: null, promise: Promise.resolve() }, menuConversation: null, searchQuery: "", searchResults: [], searchLoading: false, searchRequestId: 0, searchTimer: null,
 };
 const $ = (selector) => document.querySelector(selector);
 const messagesEl = $("#messages"), inputEl = $("#message-input"), sendButton = $("#send-button"), stopButton = $("#stop-button"), modelSelect = $("#model-select"), backToBottom = $("#back-to-bottom");
@@ -111,7 +111,7 @@ async function copyText(text) { try { await navigator.clipboard.writeText(text);
 function sourcePromptAllowed() { if (state.conversationArchived || state.conversationDeleted) { showToast("请先恢复会话再继续操作"); return false; } return !state.generating; }
 function createAssistantActions(content, sourcePrompt) {
   const actions = document.createElement("div"); actions.className = "message-actions";
-  const definitions = [["复制", "复制回复", () => copyText(content)], ["↻", "重新生成", () => sourcePromptAllowed() && sendMessage(sourcePrompt)], ["✎", "编辑提示词", () => { if (!sourcePromptAllowed()) return; const edited = prompt("编辑提示词", sourcePrompt); if (edited?.trim()) sendMessage(edited.trim()); }], ["⇄", "切换模型重新回答", () => { if (!sourcePromptAllowed()) return; const next = modelSelect.value === "deepseek" ? "terra" : "deepseek", option = modelSelect.querySelector(`option[value="${next}"]`); if (option?.disabled) return showToast("目标模型当前不可用"); modelSelect.value = next; renderManualReasoning(); syncModelStatus(); sendMessage(sourcePrompt); }]];
+  const definitions = [["复制", "复制回复", () => copyText(content)], ["↻", "重新生成", () => sourcePromptAllowed() && sendMessage(sourcePrompt)], ["✎", "编辑提示词", () => { if (!sourcePromptAllowed()) return; const edited = prompt("编辑提示词", sourcePrompt); if (edited?.trim()) sendMessage(edited.trim()); }], ["⇄", "切换模型重新回答", async () => { if (!sourcePromptAllowed()) return; const next = modelSelect.value === "deepseek" ? "terra" : "deepseek", option = modelSelect.querySelector('option[value="' + next + '"]'); if (option?.disabled) return showToast("目标模型当前不可用"); try { await updateConversationModelSelection(next); await sendMessage(sourcePrompt); } catch (error) { notify(error.message || "模型设置保存失败", "error"); } }]];
   for (const [label, title, handler] of definitions) { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.title = title; button.setAttribute("aria-label", title); button.onclick = handler; actions.append(button); }
   return actions;
 }
@@ -209,10 +209,11 @@ function locateMessage(messageId) {
   messagesEl.scrollTo({ top: Math.max(0, top), behavior: "auto" }); state.autoScroll = false; syncScrollControls(); target.focus({ preventScroll: true }); target.classList.add("search-target"); window.setTimeout(() => target.classList.remove("search-target"), 1800);
 }
 async function refreshConversations() { const query = state.view === "archived" ? "archived=true" : state.view === "trash" ? "deleted=true" : ""; state.conversations = await request(`/api/conversations${query ? `?${query}` : ""}`); renderConversationList(); }
-function startDraft() { if (state.generating) return; rememberScrollPosition(); clearGlobalSearch(); state.view = "active"; state.conversationId = null; state.conversationModelSettings = null; state.conversationArchived = false; state.conversationDeleted = false; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle("新聊天"); setComposerRestricted(); refreshConversations().catch(console.error); inputEl.focus(); }
-async function openConversation(id, targetMessageId = null) { if (state.generating) return; rememberScrollPosition(); const conversation = await request(`/api/conversations/${id}`); state.conversationId = id; state.conversationArchived = Boolean(conversation.archived_at); state.conversationDeleted = Boolean(conversation.deleted_at); state.conversationModelSettings = { model_mode: conversation.model_mode || "auto", manual_model: conversation.manual_model || "deepseek", manual_reasoning_effort: conversation.manual_reasoning_effort || null }; modelSelect.value = state.conversationModelSettings.model_mode === "auto" ? "auto" : state.conversationModelSettings.manual_model; renderManualReasoning(); renderMessages(conversation.messages); setHeaderTitle(conversation.title); setComposerRestricted(); await refreshConversations(); if (targetMessageId) locateMessage(targetMessageId); else restoreScrollPosition(id); }
+async function startDraft() { if (state.generating) return; const requestId = ++state.navigationRequestId; rememberScrollPosition(); clearGlobalSearch(); state.view = "active"; const defaults = await request("/api/conversations/default-model-settings"); if (requestId !== state.navigationRequestId) return; state.conversationId = null; state.conversationModelSettings = defaults; modelSelect.value = defaults.model_mode === "auto" ? "auto" : defaults.manual_model; state.conversationArchived = false; state.conversationDeleted = false; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle("新聊天"); renderManualReasoning(); syncModelStatus(); setComposerRestricted(); await refreshConversations(); inputEl.focus(); }
+
+async function openConversation(id, targetMessageId = null) { if (state.generating) return; const requestId = ++state.navigationRequestId; rememberScrollPosition(); const conversation = await request(`/api/conversations/${id}`); if (requestId !== state.navigationRequestId) return; state.conversationId = id; state.conversationArchived = Boolean(conversation.archived_at); state.conversationDeleted = Boolean(conversation.deleted_at); state.conversationModelSettings = { model_mode: conversation.model_mode || "auto", manual_model: conversation.manual_model || "deepseek", manual_reasoning_effort: conversation.manual_reasoning_effort || null }; modelSelect.value = state.conversationModelSettings.model_mode === "auto" ? "auto" : state.conversationModelSettings.manual_model; renderManualReasoning(); renderMessages(conversation.messages); setHeaderTitle(conversation.title); setComposerRestricted(); await refreshConversations(); if (targetMessageId) locateMessage(targetMessageId); else restoreScrollPosition(id); }
 function showView(view) { if (state.generating) return; clearGlobalSearch(); return showConversationView(view); }
-async function showConversationView(view) { rememberScrollPosition(); state.view = view; state.conversationId = null; state.conversationModelSettings = null; state.conversationArchived = view === "archived"; state.conversationDeleted = view === "trash"; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle(view === "archived" ? "已归档会话" : view === "trash" ? "回收站" : "新聊天"); setComposerRestricted(); await refreshConversations(); }
+async function showConversationView(view) { ++state.navigationRequestId; rememberScrollPosition(); state.view = view; state.conversationId = null; state.conversationModelSettings = null; state.conversationArchived = view === "archived"; state.conversationDeleted = view === "trash"; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle(view === "archived" ? "已归档会话" : view === "trash" ? "回收站" : "新聊天"); setComposerRestricted(); await refreshConversations(); }
 async function setPinned(conversation, pinned) { await request(`/api/conversations/${conversation.id}/${pinned ? "pin" : "unpin"}`, { method: "POST" }); notify(pinned ? "会话已置顶" : "已取消置顶", "success"); await refreshConversations(); }
 async function renameConversation(conversation) { const title = prompt("修改会话标题", conversation.title); if (title === null || !title.trim()) return; const updated = await request(`/api/conversations/${conversation.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: title.trim() }) }); if (state.conversationId === conversation.id) setHeaderTitle(updated.title); notify("会话已重命名", "success"); await refreshConversations(); }
 async function archiveConversation(id) { await request(`/api/conversations/${id}/archive`, { method: "POST" }); notify("会话已归档", "success"); if (state.conversationId === id) startDraft(); else await refreshConversations(); }
@@ -248,30 +249,71 @@ function renderReasoningTarget(target, className, options, selected) {
   }
 }
 function renderManualReasoning() {
-  const model = selectedReasoningModel(), options = supportedReasoningOptions(model), selected = currentReasoningEffort(model);
+  const settings = state.conversationModelSettings;
+  const isAuto = !settings || settings.model_mode === "auto" || modelSelect.value === "auto";
+  const model = isAuto ? null : selectionModel(settings.manual_model);
+  const options = isAuto ? [] : supportedReasoningOptions(model);
+  const selected = isAuto ? null : currentReasoningEffort(model);
   state.reasoningOptions = options;
   state.reasoningEffort = selected;
-  $("#reasoning-effort-control")?.classList.toggle("reserved", !options.length);
+  $("#reasoning-effort-control")?.classList.toggle("reserved", isAuto || !options.length);
   renderReasoningTarget($("#reasoning-effort-options"), "effort-option", options, selected);
   renderReasoningTarget($("#settings-reasoning-options"), "choice-button", options, selected);
   const note = $("#reasoning-model-note");
-  if (note) note.textContent = model && options.length ? `${model.display_name} · ${options.map(reasoningLabel).join(" / ")}` : "当前模型不支持手动推理档位。";
+  if (note) note.textContent = isAuto ? "Auto 会按每条消息自动选择模型与推理档位。" : model && options.length ? `${model.display_name} · ${options.map(reasoningLabel).join(" / ")}` : "当前模型不支持手动推理档位。";
 }
 async function saveConversationModelSettings() {
-  if (!state.conversationId || !state.conversationModelSettings) return;
-  state.conversationModelSettings = await request(`/api/conversations/${state.conversationId}/model-settings`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(state.conversationModelSettings) });
+  const conversationId = state.conversationId;
+  if (!conversationId || !state.conversationModelSettings) return state.conversationModelSettings;
+  const snapshot = { ...state.conversationModelSettings };
+  const operation = state.modelSettingsSave.promise.catch(() => undefined).then(async () => {
+    const saved = await request("/api/conversations/" + conversationId + "/model-settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(snapshot) });
+    if (state.conversationId === conversationId && state.modelSettingsSave.promise === operation) state.conversationModelSettings = saved;
+    return saved;
+  });
+  state.modelSettingsSave = { conversationId, promise: operation };
+  return operation;
+}
+async function updateConversationModelSelection(value) {
+  const settings = state.conversationModelSettings;
+  if (!settings) return null;
+  modelSelect.value = value;
+  settings.model_mode = value === "auto" ? "auto" : "manual";
+  if (settings.model_mode === "manual") {
+    settings.manual_model = value;
+    const model = selectionModel(settings.manual_model), options = supportedReasoningOptions(model);
+    if (!options.includes(settings.manual_reasoning_effort)) settings.manual_reasoning_effort = currentReasoningEffort(model);
+  }
+  renderManualReasoning(); syncModelStatus();
+  return saveConversationModelSettings();
 }
 function selectManualReasoning(effort) {
-  const model = selectedReasoningModel(), options = supportedReasoningOptions(model);
-  if (!model || !options.includes(effort)) { notify("当前模型不支持所选推理档位", "error"); return; }
-  const preferences = { ...state.personalization.manual_reasoning_preferences, [model.model_id]: effort };
-  choosePersonalization({ manual_reasoning_preferences: preferences }, "推理档位已保存");
+  const settings = state.conversationModelSettings, model = settings?.model_mode === "manual" ? selectionModel(settings.manual_model) : null, options = supportedReasoningOptions(model);
+  if (!settings || !model || !options.includes(effort)) { notify("当前模型不支持所选推理档位", "error"); return; }
+  settings.manual_reasoning_effort = effort;
+  renderManualReasoning();
+  saveConversationModelSettings().then(() => notify("推理档位已保存", "success")).catch((error) => notify(error.message || "推理档位保存失败", "error"));
 }
-function syncModelStatus(forcedState) { const key = modelSelect.value, label = selectionModelLabel(key), available = state.providerStatus?.[key]?.available !== false, status = forcedState || (available ? "available" : "error"), element = $("#model-status"); element.className = `model-status ${status}`; $("#model-status-label").textContent = label; }
-async function loadProviderStatus() { try { const status = await request("/api/provider-status"); state.providerStatus = status; state.modelRegistry = status.registry || null; const deepseekModel = selectionModel("deepseek"), terraModel = selectionModel("terra"), deepseek = modelSelect.querySelector('option[value="deepseek"]'), defaultDeepseek = $("#default-model-setting")?.querySelector('option[value="deepseek"]'), terra = modelSelect.querySelector('option[value="terra"]'), defaultTerra = $("#default-model-setting")?.querySelector('option[value="terra"]'); if (deepseek) deepseek.textContent = deepseekModel?.display_name || "…"; if (defaultDeepseek) defaultDeepseek.textContent = deepseekModel?.display_name || "…"; if (terra) terra.textContent = terraModel?.display_name || "…"; if (defaultTerra) defaultTerra.textContent = terraModel?.display_name || "…"; terra.disabled = !status.terra.available; if (defaultTerra) defaultTerra.disabled = !status.terra.available; if (!status.terra.available && modelSelect.value === "terra") modelSelect.value = "deepseek"; $("#provider-note").textContent = status.terra.available ? "Terra 可用；可在右侧切换模型。" : status.terra.message; renderManualReasoning(); syncModelStatus(); } catch { $("#provider-note").textContent = "无法读取模型状态。"; syncModelStatus("error"); notify("模型连接状态读取失败", "error"); } }
+function syncModelStatus(forcedState) { const key = modelSelect.value, label = selectionModelLabel(key), available = state.providerStatus?.[key]?.available !== false, status = forcedState || (available ? "available" : "error"), element = $("#model-status"); if (!element) return; element.className = `model-status ${status}`; const labelElement = $("#model-status-label"); if (labelElement) labelElement.textContent = label; }
+async function loadProviderStatus() {
+  let status;
+  try { status = await request("/api/provider-status"); }
+  catch (error) { console.error("provider-status request failed", error); const note = $("#provider-note"); if (note) note.textContent = "无法读取模型状态。"; syncModelStatus("error"); notify("模型连接状态读取失败", "error"); return; }
+  try {
+    state.providerStatus = status; state.modelRegistry = status.registry || null;
+    const deepseekModel = selectionModel("deepseek"), terraModel = selectionModel("terra"), deepseek = modelSelect.querySelector('option[value="deepseek"]'), defaultDeepseek = $("#default-model-setting")?.querySelector('option[value="deepseek"]'), terra = modelSelect.querySelector('option[value="terra"]'), defaultTerra = $("#default-model-setting")?.querySelector('option[value="terra"]');
+    if (deepseek) deepseek.textContent = deepseekModel?.display_name || "…"; if (defaultDeepseek) defaultDeepseek.textContent = deepseekModel?.display_name || "…"; if (terra) { terra.textContent = terraModel?.display_name || "…"; terra.disabled = !status.terra.available; } if (defaultTerra) { defaultTerra.textContent = terraModel?.display_name || "…"; defaultTerra.disabled = !status.terra.available; }
+    if (!status.terra.available && modelSelect.value === "terra") modelSelect.value = "deepseek";
+    const note = $("#provider-note"); if (note) note.textContent = status.terra.available ? "Terra 可用；可在右侧切换模型。" : status.terra.message;
+    renderManualReasoning(); syncModelStatus();
+  } catch (error) { console.error("provider-status UI initialization failed", error); const note = $("#provider-note"); if (note) note.textContent = "模型状态界面初始化失败，请刷新页面。"; notify("模型状态界面初始化失败", "error"); }
+}
+
 async function sendMessage(content) {
   if (!content.trim() || state.generating || conversationRestricted()) return;
-  if (!state.conversationId) { const conversation = await request("/api/conversations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }); state.conversationId = conversation.id; state.currentTitle = conversation.title; state.conversationModelSettings = { model_mode: conversation.model_mode || "auto", manual_model: conversation.manual_model || "deepseek", manual_reasoning_effort: conversation.manual_reasoning_effort || null }; modelSelect.value = state.conversationModelSettings.model_mode === "auto" ? "auto" : state.conversationModelSettings.manual_model; renderManualReasoning(); await refreshConversations(); }
+  const pendingModelSave = state.modelSettingsSave;
+  if (pendingModelSave.conversationId === state.conversationId) { try { await pendingModelSave.promise; } catch { return; } }
+  if (!state.conversationId) { const draftSettings = { ...state.conversationModelSettings }; const conversation = await request("/api/conversations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }); state.conversationId = conversation.id; state.currentTitle = conversation.title; state.conversationModelSettings = { model_mode: conversation.model_mode || "auto", manual_model: conversation.manual_model || "deepseek", manual_reasoning_effort: conversation.manual_reasoning_effort || null }; if (draftSettings.model_mode) { state.conversationModelSettings = { ...state.conversationModelSettings, ...draftSettings }; await saveConversationModelSettings(); } modelSelect.value = state.conversationModelSettings.model_mode === "auto" ? "auto" : state.conversationModelSettings.manual_model; renderManualReasoning(); await refreshConversations(); }
   state.autoScroll = true; syncScrollControls(); const cleanContent = content.trim(), createdAt = new Date().toISOString(); state.currentMessages.push({ role: "user", content: cleanContent, created_at: createdAt }); addMessage({ role: "user", content: cleanContent, created_at: createdAt }, false, true); inputEl.value = ""; resizeInput(); setGenerating(true);
   let actualModel = selectedReasoningModel()?.model_id || modelSelect.value; const assistant = addMessage({ role: "assistant", content: "", model: actualModel }, true, true, cleanContent), rich = assistant.querySelector(".rich-content"), modelBadge = assistant.querySelector(".message-model"); state.abortController = new AbortController(); let received = "", failed = false;
   try {
@@ -379,7 +421,7 @@ async function cropAvatar(file) {
   const limitations = document.createElement("div"); limitations.className = "about-block"; limitations.innerHTML = "<h4>当前限制</h4>"; const limitationList = document.createElement("ul"); (info.limitations || []).forEach((item) => { const line = document.createElement("li"); line.textContent = item; limitationList.append(line); }); limitations.append(limitationList);
   const log = document.createElement("div"); log.className = "about-block"; log.innerHTML = "<h4>更新日志</h4>"; (info.changelog || []).forEach((entry) => { const item = document.createElement("div"), title = document.createElement("strong"), entries = document.createElement("ul"); item.className = "changelog-item"; title.textContent = `${entry.version} · ${entry.title}`; (entry.items || []).forEach((text) => { const line = document.createElement("li"); line.textContent = text; entries.append(line); }); item.append(title, entries); log.append(item); }); content.append(meta, capabilities, limitations, log);
 }
-async function openSettings() { const [settings, about, personalization] = await Promise.all([request("/api/settings"), request("/api/about"), request("/api/settings/personalization")]); $("#system-prompt").value = settings.system_prompt; $("#user-profile").value = settings.user_profile; renderAbout(about); applyPersonalization(personalization); activateSettingsTab("personalization"); $("#settings-dialog").showModal(); }
+async function openSettings() { const dialog = $("#settings-dialog"); if (dialog?.open) return; const [settings, about, personalization] = await Promise.all([request("/api/settings"), request("/api/about"), request("/api/settings/personalization")]); $("#system-prompt").value = settings.system_prompt; $("#user-profile").value = settings.user_profile; renderAbout(about); applyPersonalization(personalization); activateSettingsTab("personalization"); if (dialog && !dialog.open) dialog.showModal(); }
 function activateSettingsTab(name) { document.querySelectorAll("[data-settings-tab]").forEach((tab) => tab.classList.toggle("active", tab.dataset.settingsTab === name)); document.querySelectorAll("[data-settings-panel]").forEach((panel) => panel.classList.toggle("active", panel.dataset.settingsPanel === name)); }
 
 messagesEl.addEventListener("scroll", () => { rememberScrollPosition(); state.autoScroll = isNearBottom(); syncScrollControls(); });
@@ -391,8 +433,7 @@ inputEl.addEventListener("keydown", (event) => {
   const shouldSend = state.personalization.enter_to_send || event.ctrlKey || event.metaKey;
   if (shouldSend) { event.preventDefault(); $("#chat-form").requestSubmit(); }
 });
-$("#new-chat").onclick = startDraft; $("#open-archived").onclick = () => showView("archived"); $("#open-trash").onclick = () => showView("trash"); $("#back-to-history").onclick = startDraft; $("#empty-trash").onclick = emptyTrash; $("#history-search").addEventListener("input", scheduleGlobalSearch); $("#sidebar-toggle").onclick = () => setSidebarCollapsed(!state.sidebarCollapsed); $("#edit-title").onclick = updateCurrentTitle; stopButton.onclick = () => state.abortController?.abort(); modelSelect.onchange = () => { if (state.conversationModelSettings) { state.conversationModelSettings.model_mode = modelSelect.value === "auto" ? "auto" : "manual"; if (modelSelect.value !== "auto") state.conversationModelSettings.manual_model = modelSelect.value; saveConversationModelSettings().catch((error) => notify(error.message || "模型设置保存失败", "error")); } renderManualReasoning(); syncModelStatus(); };
-$("#open-settings").onclick = () => openSettings().catch((error) => notify(error.message || "设置加载失败", "error")); $("#close-settings").onclick = () => $("#settings-dialog").close(); document.querySelectorAll("[data-settings-tab]").forEach((tab) => tab.onclick = () => activateSettingsTab(tab.dataset.settingsTab));
+$("#new-chat").onclick = startDraft; $("#open-archived").onclick = () => showView("archived"); $("#open-trash").onclick = () => showView("trash"); $("#back-to-history").onclick = startDraft; $("#empty-trash").onclick = emptyTrash; $("#history-search").addEventListener("input", scheduleGlobalSearch); $("#sidebar-toggle").onclick = () => setSidebarCollapsed(!state.sidebarCollapsed); $("#edit-title").onclick = updateCurrentTitle; stopButton.onclick = () => state.abortController?.abort(); modelSelect.onchange = () => updateConversationModelSelection(modelSelect.value).catch((error) => notify(error.message || "模型设置保存失败", "error")); $("#open-settings").onclick = () => openSettings().catch((error) => notify(error.message || "设置加载失败", "error")); $("#close-settings").onclick = () => $("#settings-dialog").close(); document.querySelectorAll("[data-settings-tab]").forEach((tab) => tab.onclick = () => activateSettingsTab(tab.dataset.settingsTab));
 document.querySelectorAll('input[name="theme-mode"]').forEach((input) => input.onchange = () => choosePersonalization({ theme_mode: input.value }));
 document.querySelectorAll("#color-scheme-options [data-color-scheme]").forEach((button) => button.onclick = () => choosePersonalization({ color_scheme: button.dataset.colorScheme }));
 document.querySelectorAll("#assistant-avatar-options [data-assistant-avatar]").forEach((button) => button.onclick = () => choosePersonalization({ assistant_avatar: button.dataset.assistantAvatar }));
@@ -410,4 +451,4 @@ $("#reset-user-avatar").onclick = async () => { await choosePersonalization({ us
 document.querySelectorAll("[data-coming-soon]").forEach((button) => button.onclick = () => notify(button.dataset.comingSoon, "system"));
 $("#settings-form").addEventListener("submit", async (event) => { event.preventDefault(); try { await request("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ system_prompt: $("#system-prompt").value, user_profile: $("#user-profile").value }) }); notify("系统设置保存成功", "success"); } catch (error) { notify(error.message || "系统设置保存失败", "error"); } });document.addEventListener("click", (event) => { if (!event.target.closest("#conversation-menu") && !event.target.closest(".conversation-more")) closeConversationMenu(); }); document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeConversationMenu(); }); window.addEventListener("resize", closeConversationMenu);
 
-(async function boot() { setSidebarCollapsed(state.sidebarCollapsed); setHeaderTitle("新聊天"); emptyMessages(); await Promise.all([refreshConversations(), loadProviderStatus(), loadPersonalization()]); inputEl.focus(); })().catch((error) => { console.error(error); $("#provider-note").textContent = "启动初始化失败，请刷新页面。"; notify(error.message || "XiaoG 初始化失败", "error"); });
+(async function boot() { setSidebarCollapsed(state.sidebarCollapsed); setHeaderTitle("新聊天"); emptyMessages(); await loadPersonalization(); await loadProviderStatus(); await startDraft(); inputEl.focus(); })().catch((error) => { console.error(error); $("#provider-note").textContent = "启动初始化失败，请刷新页面。"; notify(error.message || "XiaoG 初始化失败", "error"); });

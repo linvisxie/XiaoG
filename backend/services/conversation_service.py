@@ -15,19 +15,25 @@ CONVERSATION_COLUMNS = (
 
 
 class ConversationService:
+    def default_model_settings(self) -> dict:
+        default_model = self.get_setting("default_model") or "deepseek"
+        manual_model = default_model if default_model in {"deepseek", "terra"} else "deepseek"
+        return {
+            "model_mode": "auto" if default_model == "auto" else "manual",
+            "manual_model": manual_model,
+            "manual_reasoning_effort": self.get_manual_reasoning_preferences().get(manual_model),
+        }
+
     def create_conversation(self, title: str | None = None) -> dict:
         conversation_id = str(uuid4())
         timestamp = now_iso()
-        default_model = self.get_setting("default_model") or "deepseek"
-        preferences = self.get_manual_reasoning_preferences()
-        manual_model = default_model if default_model in {"deepseek", "terra"} else "deepseek"
+        model_settings = self.default_model_settings()
         record = {
             "id": conversation_id, "title": (title or "新对话").strip()[:120] or "新对话",
             "created_at": timestamp, "updated_at": timestamp, "archived_at": None,
             "codex_thread_id": None, "codex_last_synced_message_id": None,
             "is_pinned": 0, "pinned_at": None, "deleted_at": None, "deleted_from": None,
-            "model_mode": "auto" if default_model == "auto" else "manual",
-            "manual_model": manual_model, "manual_reasoning_effort": preferences.get(manual_model),
+            **model_settings,
         }
         with get_connection() as conn:
             conn.execute(
