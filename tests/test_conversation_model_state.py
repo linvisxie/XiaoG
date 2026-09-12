@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch
 
 from backend.database import db as database
 from backend.database.models import ChatRequest
-from backend.main import chat
+from backend.main import chat, resolved_default_conversation_model_settings
 from backend.router.model_router import model_router
 from backend.services.conversation_service import ConversationService
 
@@ -78,9 +78,8 @@ class ConversationModelStateTests(unittest.TestCase):
             self.service.get_conversation(first["id"])["manual_model"],
             "deepseek",
         )
-        self.assertEqual(
+        self.assertIsNone(
             self.service.get_conversation(first["id"])["manual_reasoning_effort"],
-            "low",
         )
         self.assertEqual(
             self.service.get_conversation(second["id"])["model_mode"],
@@ -129,6 +128,105 @@ class ConversationModelStateTests(unittest.TestCase):
                     "manual_reasoning_effort": "high",
                 },
             ],
+        )
+
+    def registry_status(self) -> dict:
+        return {
+            "registry": {
+                "models": [
+                    {
+                        "selection_key": "deepseek",
+                        "model_id": "deepseek-v4-flash",
+                        "supported_reasoning_efforts": ["none", "low", "high", "max"],
+                        "default_reasoning_effort": "high",
+                    },
+                    {
+                        "selection_key": "terra",
+                        "model_id": "gpt-5.6-terra",
+                        "supported_reasoning_efforts": ["low", "medium", "high", "xhigh", "max", "ultra"],
+                        "default_reasoning_effort": "medium",
+                    },
+                ]
+            }
+        }
+
+    def test_system_defaults_resolve_per_model_preferences_from_registry(self) -> None:
+        self.service.update_personalization_settings(
+            {
+                "default_model": "terra",
+                "manual_reasoning_preferences": {
+                    "deepseek": "none",
+                    "terra": "ultra",
+                },
+            }
+        )
+        with patch.object(model_router, "status", AsyncMock(return_value=self.registry_status())):
+            terra_defaults = asyncio.run(resolved_default_conversation_model_settings())
+
+        self.assertEqual(
+            terra_defaults,
+            {
+                "model_mode": "manual",
+                "manual_model": "terra",
+                "manual_reasoning_effort": "ultra",
+            },
+        )
+
+        self.service.update_personalization_settings(
+            {
+                "default_model": "deepseek",
+                "manual_reasoning_preferences": {
+                    "deepseek-v4-flash": "low",
+                    "gpt-5.6-terra": "ultra",
+                },
+            }
+        )
+        with patch.object(model_router, "status", AsyncMock(return_value=self.registry_status())):
+            legacy_defaults = asyncio.run(resolved_default_conversation_model_settings())
+
+        self.assertEqual(legacy_defaults["manual_model"], "deepseek")
+        self.assertEqual(legacy_defaults["manual_reasoning_effort"], "low")
+
+    def test_auto_default_preserves_manual_preferences_and_new_conversation_snapshots_defaults(self) -> None:
+        self.service.update_personalization_settings(
+            {
+                "default_model": "deepseek",
+                "manual_reasoning_preferences": {"deepseek": "low", "terra": "ultra"},
+            }
+        )
+        with patch.object(model_router, "status", AsyncMock(return_value=self.registry_status())):
+            first_defaults = asyncio.run(resolved_default_conversation_model_settings())
+        existing = self.service.create_conversation(model_settings=first_defaults)
+
+        self.service.update_personalization_settings({"default_model": "auto"})
+        with patch.object(model_router, "status", AsyncMock(return_value=self.registry_status())):
+            auto_defaults = asyncio.run(resolved_default_conversation_model_settings())
+        draft = self.service.default_model_settings()
+
+        self.assertEqual(auto_defaults["model_mode"], "auto")
+        self.assertIsNone(auto_defaults["manual_reasoning_effort"])
+        self.assertEqual(draft["model_mode"], "auto")
+        self.assertEqual(
+            self.service.get_manual_reasoning_preferences(),
+            {"deepseek": "low", "terra": "ultra"},
+        )
+        self.assertEqual(
+            self.service.get_conversation(existing["id"])["manual_reasoning_effort"],
+            "low",
+        )
+
+        self.service.update_personalization_settings({"default_model": "terra"})
+        with patch.object(model_router, "status", AsyncMock(return_value=self.registry_status())):
+            terra_defaults = asyncio.run(resolved_default_conversation_model_settings())
+        new_conversation = self.service.create_conversation(model_settings=terra_defaults)
+
+        self.assertEqual(
+            self.service.get_conversation(new_conversation["id"])["manual_reasoning_effort"],
+            "ultra",
+        )
+        self.assertEqual(
+            self.service.get_conversation(existing["id"])["manual_model"],
+            "deepseek",
         )
 
     def test_chat_uses_persisted_manual_state_not_conflicting_request_fields(self) -> None:

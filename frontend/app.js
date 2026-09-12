@@ -228,25 +228,54 @@ const reasoningLabels = Object.freeze({ none: "None", low: "Low", medium: "Mediu
 function reasoningLabel(value) { return reasoningLabels[value] || value; }
 function selectedReasoningModel() { return selectionModel(modelSelect.value); }
 function supportedReasoningOptions(model) { return Array.isArray(model?.supported_reasoning_efforts) ? model.supported_reasoning_efforts.filter((value) => typeof value === "string") : []; }
-function currentReasoningEffort(model) {
+function resolveReasoningEffort(model, preferred) {
   const options = supportedReasoningOptions(model);
-  const saved = state.conversationModelSettings?.manual_model === model?.selection_key ? state.conversationModelSettings.manual_reasoning_effort : state.personalization.manual_reasoning_preferences?.[model?.model_id];
-  if (options.includes(saved)) return saved;
+  if (options.includes(preferred)) return preferred;
   return options.includes(model?.default_reasoning_effort) ? model.default_reasoning_effort : options[0] || null;
 }
-function renderReasoningTarget(target, className, options, selected) {
+function defaultReasoningEffort(model) {
+  const preferences = state.personalization.manual_reasoning_preferences || {};
+  return resolveReasoningEffort(model, preferences[model?.selection_key] ?? preferences[model?.model_id]);
+}
+function currentReasoningEffort(model) {
+  const saved = state.conversationModelSettings?.manual_model === model?.selection_key ? state.conversationModelSettings.manual_reasoning_effort : null;
+  return resolveReasoningEffort(model, saved);
+}
+function systemDefaultModelSettings() {
+  const defaultModel = state.personalization.default_model;
+  if (defaultModel === "auto") return { model_mode: "auto", manual_model: "deepseek", manual_reasoning_effort: null };
+  const model = selectionModel(defaultModel);
+  return {
+    model_mode: "manual",
+    manual_model: defaultModel,
+    manual_reasoning_effort: defaultReasoningEffort(model),
+  };
+}
+function renderReasoningTarget(target, className, options, selected, onSelect) {
   if (!target) return;
   target.replaceChildren();
   for (const value of options) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `${className} ${value === selected ? "active" : ""}`;
+    button.className = className + (value === selected ? " active" : "");
     button.textContent = reasoningLabel(value);
     button.dataset.reasoningEffort = value;
     button.setAttribute("aria-pressed", String(value === selected));
-    button.onclick = () => selectManualReasoning(value);
+    button.onclick = () => onSelect(value);
     target.append(button);
   }
+}
+function renderDefaultReasoning() {
+  const defaultModel = state.personalization.default_model;
+  const isAuto = defaultModel === "auto";
+  const model = isAuto ? null : selectionModel(defaultModel);
+  const options = isAuto ? [] : supportedReasoningOptions(model);
+  const selected = isAuto ? null : defaultReasoningEffort(model);
+  const control = $("#settings-reasoning-control");
+  if (control) control.classList.toggle("reserved", isAuto || !options.length);
+  renderReasoningTarget($("#settings-reasoning-options"), "choice-button", options, selected, selectDefaultReasoning);
+  const note = $("#reasoning-model-note");
+  if (note) note.textContent = isAuto ? "Auto 不使用手动推理档位；各 Manual 模型已保存的默认偏好会保留。" : model && options.length ? model.display_name + " · " + options.map(reasoningLabel).join(" / ") : "当前默认模型不支持手动推理档位。";
 }
 function renderManualReasoning() {
   const settings = state.conversationModelSettings;
@@ -257,10 +286,8 @@ function renderManualReasoning() {
   state.reasoningOptions = options;
   state.reasoningEffort = selected;
   $("#reasoning-effort-control")?.classList.toggle("reserved", isAuto || !options.length);
-  renderReasoningTarget($("#reasoning-effort-options"), "effort-option", options, selected);
-  renderReasoningTarget($("#settings-reasoning-options"), "choice-button", options, selected);
-  const note = $("#reasoning-model-note");
-  if (note) note.textContent = isAuto ? "Auto 会按每条消息自动选择模型与推理档位。" : model && options.length ? `${model.display_name} · ${options.map(reasoningLabel).join(" / ")}` : "当前模型不支持手动推理档位。";
+  renderReasoningTarget($("#reasoning-effort-options"), "effort-option", options, selected, selectManualReasoning);
+  renderDefaultReasoning();
 }
 async function saveConversationModelSettings() {
   const conversationId = state.conversationId;
@@ -281,8 +308,8 @@ async function updateConversationModelSelection(value) {
   settings.model_mode = value === "auto" ? "auto" : "manual";
   if (settings.model_mode === "manual") {
     settings.manual_model = value;
-    const model = selectionModel(settings.manual_model), options = supportedReasoningOptions(model);
-    if (!options.includes(settings.manual_reasoning_effort)) settings.manual_reasoning_effort = currentReasoningEffort(model);
+    const model = selectionModel(settings.manual_model);
+    if (!supportedReasoningOptions(model).includes(settings.manual_reasoning_effort)) settings.manual_reasoning_effort = currentReasoningEffort(model);
   }
   renderManualReasoning(); syncModelStatus();
   return saveConversationModelSettings();
@@ -293,6 +320,12 @@ function selectManualReasoning(effort) {
   settings.manual_reasoning_effort = effort;
   renderManualReasoning();
   saveConversationModelSettings().then(() => notify("推理档位已保存", "success")).catch((error) => notify(error.message || "推理档位保存失败", "error"));
+}
+function selectDefaultReasoning(effort) {
+  const defaultModel = state.personalization.default_model, model = defaultModel === "auto" ? null : selectionModel(defaultModel), options = supportedReasoningOptions(model);
+  if (!model || !options.includes(effort)) { notify("当前默认模型不支持所选推理档位", "error"); return; }
+  const preferences = { ...state.personalization.manual_reasoning_preferences, [model.selection_key]: effort };
+  choosePersonalization({ manual_reasoning_preferences: preferences }, "默认推理档位已保存");
 }
 function syncModelStatus(forcedState) { const key = modelSelect.value, label = selectionModelLabel(key), available = state.providerStatus?.[key]?.available !== false, status = forcedState || (available ? "available" : "error"), element = $("#model-status"); if (!element) return; element.className = `model-status ${status}`; const labelElement = $("#model-status-label"); if (labelElement) labelElement.textContent = label; }
 async function loadProviderStatus() {
@@ -358,6 +391,13 @@ function normalizePersonalization(value = {}) {
     ui_language: value.ui_language === "en" ? "en" : "zh-CN",
   };
 }
+function hydrateDraftSystemDefaults() {
+  if (state.conversationId) return;
+  const defaults = systemDefaultModelSettings();
+  state.conversationModelSettings = defaults;
+  modelSelect.value = defaults.model_mode === "auto" ? "auto" : defaults.manual_model;
+  renderManualReasoning(); syncModelStatus();
+}
 function applyPersonalization(value, options = {}) {
   state.personalization = normalizePersonalization(value);
   const root = document.documentElement;
@@ -369,10 +409,7 @@ function applyPersonalization(value, options = {}) {
   root.dataset.animations = state.personalization.animations_enabled ? "on" : "off";
   window.XiaoGI18n?.setLanguage(state.personalization.ui_language);
   setHeaderTitle(state.currentTitle);
-  if (options.selectDefault) {
-    const option = modelSelect.querySelector(`option[value="${state.personalization.default_model}"]`);
-    if (option && !option.disabled) { modelSelect.value = state.personalization.default_model; renderManualReasoning(); syncModelStatus(); }
-  }
+  if (options.hydrateDraft) hydrateDraftSystemDefaults();
   renderPersonalizationControls(); applyAllAvatars(); updateComposerHint();
 }
 function markSelected(selector, dataKey, selectedValue) {
@@ -383,7 +420,7 @@ function renderPersonalizationControls() {
   markSelected("#color-scheme-options [data-color-scheme]", "colorScheme", state.personalization.color_scheme);
   markSelected("#assistant-avatar-options [data-assistant-avatar]", "assistantAvatar", state.personalization.assistant_avatar);
   markSelected("#font-scale-options [data-font-scale]", "fontScale", state.personalization.font_scale);
-  renderManualReasoning();
+  renderDefaultReasoning();
   markSelected("#chat-density-options [data-chat-density]", "chatDensity", state.personalization.chat_density);
   const defaultModel = $("#default-model-setting"); if (defaultModel) defaultModel.value = state.personalization.default_model;
   const showTime = $("#show-message-time"); if (showTime) showTime.checked = state.personalization.show_message_time;
@@ -392,7 +429,7 @@ function renderPersonalizationControls() {
   const language = $("#ui-language-setting"); if (language) language.value = state.personalization.ui_language;
   const preview = $("#user-avatar-preview"); if (preview) { preview.replaceChildren(); if (state.personalization.user_avatar.startsWith("data:image/")) { const image = document.createElement("img"); image.src = state.personalization.user_avatar; image.alt = "用户头像预览"; preview.append(image); } else preview.textContent = "U"; }
 }
-async function loadPersonalization() { applyPersonalization(await request("/api/settings/personalization"), { selectDefault: true }); }
+async function loadPersonalization() { applyPersonalization(await request("/api/settings/personalization"), { hydrateDraft: true }); }
 function savePersonalization(successMessage = "设置保存成功") {
   const snapshot = { ...state.personalization }, status = $("#personalization-status"); if (status) status.textContent = "正在保存…";
   state.personalizationSave = state.personalizationSave.catch(() => undefined).then(async () => {
@@ -401,7 +438,7 @@ function savePersonalization(successMessage = "设置保存成功") {
   }).catch((error) => { console.error(error); if (status) status.textContent = "未能保存设置，请稍后重试。"; notify(error.message || "设置保存失败", "error"); });
   return state.personalizationSave;
 }
-function choosePersonalization(change, successMessage) { applyPersonalization({ ...state.personalization, ...change }, { selectDefault: Object.hasOwn(change, "default_model") }); return savePersonalization(successMessage); }
+function choosePersonalization(change, successMessage) { const hydrateDraft = Object.hasOwn(change, "default_model") || Object.hasOwn(change, "manual_reasoning_preferences"); applyPersonalization({ ...state.personalization, ...change }, { hydrateDraft }); return savePersonalization(successMessage); }
 async function cropAvatar(file) {
   if (!file || !file.type.match(/^image\/(png|jpeg|webp)$/)) throw new Error("仅支持 PNG、JPEG 或 WebP 图片。");
    if (file.size > 10 * 1024 * 1024) throw new Error("图片不能超过 10MB。");

@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>小G</title>
-  <link rel="stylesheet" href="/static/style.css?v=0.4.2" />
+  <link rel="stylesheet" href="/static/style.css?v=0.4.2-system-defaults-r4" />
 </head>
 <body>
   <div class="app-shell" id="app-shell">
@@ -108,7 +108,7 @@
           <h3>模型与智能</h3>
           <div class="settings-group"><label class="field-label" for="default-model-setting">默认模型</label><select id="default-model-setting" class="settings-select"><option value="auto">Auto</option><option value="deepseek">…</option><option value="terra">…</option></select><p class="dialog-tip">新打开页面时优先选择此模式；Manual 会严格遵从选择，Auto 使用本地规则路由。</p></div>
           <div class="settings-group"><h4>Auto 模式</h4><p class="dialog-tip">选择顶部模型控件中的 Auto 后，本地规则会基于任务复杂度、上下文、代码/结构化信号及实时模型可用状态选择模型和推理档位。Manual 永远优先。</p></div>
-          <div class="settings-group"><h4>手动推理档位</h4><div id="settings-reasoning-options" class="choice-row" role="group" aria-label="手动推理档位"></div><p id="reasoning-model-note" class="dialog-tip">当前模型支持的推理档位会显示在这里。</p></div>
+          <div id="settings-reasoning-control" class="settings-group"><h4>手动推理档位</h4><div id="settings-reasoning-options" class="choice-row" role="group" aria-label="手动推理档位"></div><p id="reasoning-model-note" class="dialog-tip">当前模型支持的推理档位会显示在这里。</p></div>
         </section>
 
         <section class="settings-panel" data-settings-panel="application">
@@ -143,6 +143,6 @@
   <template id="tool-result-card-template"><article class="rich-card tool-result-card" data-rich-type="tool_result"><div class="rich-card-preview">✓</div><div><strong>工具结果</strong><p>工具执行结果入口预留</p></div><span class="phase-badge">预留</span></article></template>
   <script src="/static/i18n.js?v=0.4.2"></script>
   <script src="/static/notification_service.js?v=0.4.2"></script>
-  <script src="/static/app.js?v=0.4.2-header-state-r3"></script>
+  <script src="/static/app.js?v=0.4.2-system-defaults-r4"></script>
 </body>
 </html>

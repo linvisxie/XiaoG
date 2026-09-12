@@ -101,14 +101,50 @@ async def search(query: str = Query(default="", max_length=120)) -> dict:
     return {"query": " ".join(query.split()), "results": result["conversations"]}
 
 
+async def resolved_default_conversation_model_settings() -> dict:
+    """Resolve persisted System Defaults through the live Registry capability snapshot."""
+    defaults = conversation_service.default_model_settings()
+    if defaults["model_mode"] == "auto":
+        return defaults
+
+    registry = (await model_router.status()).get("registry") or {}
+    model = next(
+        (
+            item
+            for item in registry.get("models") or []
+            if item.get("selection_key") == defaults["manual_model"]
+        ),
+        None,
+    )
+    if not model:
+        return defaults
+
+    options = [
+        effort
+        for effort in model.get("supported_reasoning_efforts") or []
+        if isinstance(effort, str)
+    ]
+    if not options:
+        return {**defaults, "manual_reasoning_effort": None}
+
+    preferences = conversation_service.get_manual_reasoning_preferences()
+    requested = preferences.get(defaults["manual_model"]) or preferences.get(model.get("model_id"))
+    default_effort = model.get("default_reasoning_effort")
+    effort = requested if requested in options else default_effort if default_effort in options else options[0]
+    return {**defaults, "manual_reasoning_effort": effort}
+
+
 @app.get("/api/conversations/default-model-settings")
 async def get_default_conversation_model_settings() -> dict:
-    return conversation_service.default_model_settings()
+    return await resolved_default_conversation_model_settings()
+
 
 @app.post("/api/conversations", status_code=201)
 async def create_conversation(payload: ConversationCreate) -> dict:
-    return conversation_service.create_conversation(payload.title)
-
+    return conversation_service.create_conversation(
+        payload.title,
+        await resolved_default_conversation_model_settings(),
+    )
 
 @app.patch("/api/conversations/{conversation_id}")
 async def update_conversation_title(conversation_id: str, payload: ConversationTitleUpdate) -> dict:
