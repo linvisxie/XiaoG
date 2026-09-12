@@ -1,12 +1,11 @@
 const state = {
   conversationId: null, conversationArchived: false, conversationDeleted: false, view: "active",
-  abortController: null, generating: false, autoScroll: true, terraEfforts: [],
-  terraEffort: localStorage.getItem("xiaog.terraReasoningEffort") || "medium",
+  abortController: null, generating: false, autoScroll: true, reasoningOptions: [], reasoningEffort: null,
   sidebarCollapsed: localStorage.getItem("xiaog.sidebarCollapsed") === "true",
   scrollPositions: new Map(), conversations: [], currentMessages: [], currentTitle: "新聊天", providerStatus: null, modelRegistry: null,
   personalization: {
     theme_mode: "light", color_scheme: "green", assistant_avatar: "default", user_avatar: "default", font_scale: "standard",
-    default_model: "deepseek", reasoning_preference: "balanced", chat_density: "comfortable",
+    default_model: "deepseek", reasoning_preference: "balanced", manual_reasoning_preferences: {}, chat_density: "comfortable",
     show_message_time: true, enter_to_send: true, animations_enabled: true, ui_language: "zh-CN",
   },
   personalizationSave: Promise.resolve(), menuConversation: null, searchQuery: "", searchResults: [], searchLoading: false, searchRequestId: 0, searchTimer: null,
@@ -16,7 +15,7 @@ const messagesEl = $("#messages"), inputEl = $("#message-input"), sendButton = $
 
 async function request(url, options = {}) {
   const response = await fetch(url, options);
-  if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.detail || "请求失败，请稍后重试。"); }
+  if (!response.ok) { const data = await response.json().catch(() => ({})), detail = data.detail; throw new Error(typeof detail === "string" ? detail : detail?.message || "请求失败，请稍后重试。"); }
   return response.status === 204 ? null : response.json();
 }
 function modelLabel(model) {
@@ -112,7 +111,7 @@ async function copyText(text) { try { await navigator.clipboard.writeText(text);
 function sourcePromptAllowed() { if (state.conversationArchived || state.conversationDeleted) { showToast("请先恢复会话再继续操作"); return false; } return !state.generating; }
 function createAssistantActions(content, sourcePrompt) {
   const actions = document.createElement("div"); actions.className = "message-actions";
-  const definitions = [["复制", "复制回复", () => copyText(content)], ["↻", "重新生成", () => sourcePromptAllowed() && sendMessage(sourcePrompt)], ["✎", "编辑提示词", () => { if (!sourcePromptAllowed()) return; const edited = prompt("编辑提示词", sourcePrompt); if (edited?.trim()) sendMessage(edited.trim()); }], ["⇄", "切换模型重新回答", () => { if (!sourcePromptAllowed()) return; const next = modelSelect.value === "deepseek" ? "terra" : "deepseek", option = modelSelect.querySelector(`option[value="${next}"]`); if (option?.disabled) return showToast("目标模型当前不可用"); modelSelect.value = next; syncTerraControl(); syncModelStatus(); sendMessage(sourcePrompt); }]];
+  const definitions = [["复制", "复制回复", () => copyText(content)], ["↻", "重新生成", () => sourcePromptAllowed() && sendMessage(sourcePrompt)], ["✎", "编辑提示词", () => { if (!sourcePromptAllowed()) return; const edited = prompt("编辑提示词", sourcePrompt); if (edited?.trim()) sendMessage(edited.trim()); }], ["⇄", "切换模型重新回答", () => { if (!sourcePromptAllowed()) return; const next = modelSelect.value === "deepseek" ? "terra" : "deepseek", option = modelSelect.querySelector(`option[value="${next}"]`); if (option?.disabled) return showToast("目标模型当前不可用"); modelSelect.value = next; renderManualReasoning(); syncModelStatus(); sendMessage(sourcePrompt); }]];
   for (const [label, title, handler] of definitions) { const button = document.createElement("button"); button.type = "button"; button.textContent = label; button.title = title; button.setAttribute("aria-label", title); button.onclick = handler; actions.append(button); }
   return actions;
 }
@@ -224,30 +223,62 @@ async function permanentlyDelete(conversation) { if (!confirm(`永久删除“${
 async function emptyTrash() { if (!state.conversations.length || !confirm("永久删除回收站中的全部会话？此操作无法撤销。")) return; const result = await request("/api/trash", { method: "DELETE" }); notify(`已永久删除 ${result.deleted} 个会话`, "success"); await showView("trash"); }
 async function updateCurrentTitle() { const conversation = state.conversations.find((item) => item.id === state.conversationId) || { id: state.conversationId, title: state.currentTitle }; if (!conversation.id || conversationRestricted() || state.generating) return; await renameConversation(conversation); }
 
-function renderTerraEfforts(details = {}) {
-  const supported = new Set(details.supported_reasoning_efforts || []), options = [["low", "低"], ["medium", "中"], ["high", "高"]].filter(([value]) => supported.has(value)); state.terraEfforts = options.map(([value]) => value);
-  if (!state.terraEfforts.includes(state.terraEffort)) state.terraEffort = state.terraEfforts.includes(details.default_reasoning_effort) ? details.default_reasoning_effort : state.terraEfforts[0] || ""; if (state.terraEffort) localStorage.setItem("xiaog.terraReasoningEffort", state.terraEffort);
-  const target = $("#terra-effort-options"); target.innerHTML = "";
-  for (const [value, label] of options) { const button = document.createElement("button"); button.type = "button"; button.className = `effort-option ${value === state.terraEffort ? "active" : ""}`; button.textContent = label; button.setAttribute("aria-pressed", String(value === state.terraEffort)); button.onclick = () => { state.terraEffort = value; localStorage.setItem("xiaog.terraReasoningEffort", value); renderTerraEfforts({ supported_reasoning_efforts: state.terraEfforts, default_reasoning_effort: value }); }; target.append(button); }
-  syncTerraControl();
+const reasoningLabels = Object.freeze({ none: "None", low: "Low", medium: "Medium", high: "High", xhigh: "Extra High", max: "Max", ultra: "Ultra" });
+function reasoningLabel(value) { return reasoningLabels[value] || value; }
+function selectedReasoningModel() { return selectionModel(modelSelect.value); }
+function supportedReasoningOptions(model) { return Array.isArray(model?.supported_reasoning_efforts) ? model.supported_reasoning_efforts.filter((value) => typeof value === "string") : []; }
+function currentReasoningEffort(model) {
+  const options = supportedReasoningOptions(model);
+  const saved = state.personalization.manual_reasoning_preferences?.[model?.model_id];
+  if (options.includes(saved)) return saved;
+  return options.includes(model?.default_reasoning_effort) ? model.default_reasoning_effort : options[0] || null;
 }
-function syncTerraControl() { $("#terra-effort-control").classList.toggle("reserved", modelSelect.value !== "terra" || !state.terraEfforts.length); }
+function renderReasoningTarget(target, className, options, selected) {
+  if (!target) return;
+  target.replaceChildren();
+  for (const value of options) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `${className} ${value === selected ? "active" : ""}`;
+    button.textContent = reasoningLabel(value);
+    button.dataset.reasoningEffort = value;
+    button.setAttribute("aria-pressed", String(value === selected));
+    button.onclick = () => selectManualReasoning(value);
+    target.append(button);
+  }
+}
+function renderManualReasoning() {
+  const model = selectedReasoningModel(), options = supportedReasoningOptions(model), selected = currentReasoningEffort(model);
+  state.reasoningOptions = options;
+  state.reasoningEffort = selected;
+  $("#reasoning-effort-control")?.classList.toggle("reserved", !options.length);
+  renderReasoningTarget($("#reasoning-effort-options"), "effort-option", options, selected);
+  renderReasoningTarget($("#settings-reasoning-options"), "choice-button", options, selected);
+  const note = $("#reasoning-model-note");
+  if (note) note.textContent = model && options.length ? `${model.display_name} · ${options.map(reasoningLabel).join(" / ")}` : "当前模型不支持手动推理档位。";
+}
+function selectManualReasoning(effort) {
+  const model = selectedReasoningModel(), options = supportedReasoningOptions(model);
+  if (!model || !options.includes(effort)) { notify("当前模型不支持所选推理档位", "error"); return; }
+  const preferences = { ...state.personalization.manual_reasoning_preferences, [model.model_id]: effort };
+  choosePersonalization({ manual_reasoning_preferences: preferences }, "推理档位已保存");
+}
 function syncModelStatus(forcedState) { const key = modelSelect.value, label = selectionModelLabel(key), available = state.providerStatus?.[key]?.available !== false, status = forcedState || (available ? "available" : "error"), element = $("#model-status"); element.className = `model-status ${status}`; $("#model-status-label").textContent = label; }
-async function loadProviderStatus() { try { const status = await request("/api/provider-status"); state.providerStatus = status; state.modelRegistry = status.registry || null; const deepseekModel = selectionModel("deepseek"), terraModel = selectionModel("terra"), deepseek = modelSelect.querySelector('option[value="deepseek"]'), defaultDeepseek = $("#default-model-setting")?.querySelector('option[value="deepseek"]'), terra = modelSelect.querySelector('option[value="terra"]'), defaultTerra = $("#default-model-setting")?.querySelector('option[value="terra"]'); if (deepseek) deepseek.textContent = deepseekModel?.display_name || "…"; if (defaultDeepseek) defaultDeepseek.textContent = deepseekModel?.display_name || "…"; if (terra) terra.textContent = terraModel?.display_name || "…"; if (defaultTerra) defaultTerra.textContent = terraModel?.display_name || "…"; terra.disabled = !status.terra.available; if (defaultTerra) defaultTerra.disabled = !status.terra.available; if (!status.terra.available && modelSelect.value === "terra") modelSelect.value = "deepseek"; $("#provider-note").textContent = status.terra.available ? "Terra 可用；可在右侧切换模型。" : status.terra.message; renderTerraEfforts(status.terra.details || {}); syncModelStatus(); } catch { $("#provider-note").textContent = "无法读取模型状态。"; syncModelStatus("error"); notify("模型连接状态读取失败", "error"); } }
+async function loadProviderStatus() { try { const status = await request("/api/provider-status"); state.providerStatus = status; state.modelRegistry = status.registry || null; const deepseekModel = selectionModel("deepseek"), terraModel = selectionModel("terra"), deepseek = modelSelect.querySelector('option[value="deepseek"]'), defaultDeepseek = $("#default-model-setting")?.querySelector('option[value="deepseek"]'), terra = modelSelect.querySelector('option[value="terra"]'), defaultTerra = $("#default-model-setting")?.querySelector('option[value="terra"]'); if (deepseek) deepseek.textContent = deepseekModel?.display_name || "…"; if (defaultDeepseek) defaultDeepseek.textContent = deepseekModel?.display_name || "…"; if (terra) terra.textContent = terraModel?.display_name || "…"; if (defaultTerra) defaultTerra.textContent = terraModel?.display_name || "…"; terra.disabled = !status.terra.available; if (defaultTerra) defaultTerra.disabled = !status.terra.available; if (!status.terra.available && modelSelect.value === "terra") modelSelect.value = "deepseek"; $("#provider-note").textContent = status.terra.available ? "Terra 可用；可在右侧切换模型。" : status.terra.message; renderManualReasoning(); syncModelStatus(); } catch { $("#provider-note").textContent = "无法读取模型状态。"; syncModelStatus("error"); notify("模型连接状态读取失败", "error"); } }
 async function sendMessage(content) {
   if (!content.trim() || state.generating || conversationRestricted()) return;
   if (!state.conversationId) { const conversation = await request("/api/conversations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }); state.conversationId = conversation.id; state.currentTitle = conversation.title; await refreshConversations(); }
   state.autoScroll = true; syncScrollControls(); const cleanContent = content.trim(), createdAt = new Date().toISOString(); state.currentMessages.push({ role: "user", content: cleanContent, created_at: createdAt }); addMessage({ role: "user", content: cleanContent, created_at: createdAt }, false, true); inputEl.value = ""; resizeInput(); setGenerating(true);
-  const assistant = addMessage({ role: "assistant", content: "", model: modelSelect.value === "terra" ? "gpt-5.6-terra" : "deepseek-v4-flash" }, true, true, cleanContent), rich = assistant.querySelector(".rich-content"), modelBadge = assistant.querySelector(".message-model"); state.abortController = new AbortController(); let received = "", failed = false;
+  let actualModel = selectedReasoningModel()?.model_id || modelSelect.value; const assistant = addMessage({ role: "assistant", content: "", model: actualModel }, true, true, cleanContent), rich = assistant.querySelector(".rich-content"), modelBadge = assistant.querySelector(".message-model"); state.abortController = new AbortController(); let received = "", failed = false;
   try {
-    const response = await fetch(`/api/conversations/${state.conversationId}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: cleanContent, model_preference: modelSelect.value, terra_reasoning_effort: modelSelect.value === "terra" ? state.terraEffort : null }), signal: state.abortController.signal });
-    if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.detail || "消息发送失败。"); }
+    const response = await fetch(`/api/conversations/${state.conversationId}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: cleanContent, model_preference: modelSelect.value, reasoning_effort: state.reasoningEffort }), signal: state.abortController.signal });
+    if (!response.ok) { const data = await response.json().catch(() => ({})), detail = data.detail; throw new Error(typeof detail === "string" ? detail : detail?.message || "消息发送失败。"); }
     const reader = response.body.getReader(), decoder = new TextDecoder(); let buffer = "";
     while (true) {
       const { value, done } = await reader.read(); if (done) break; buffer += decoder.decode(value, { stream: true }); const blocks = buffer.split("\n\n"); buffer = blocks.pop();
       for (const block of blocks) {
         const lines = block.split("\n"), event = lines.find((line) => line.startsWith("event:"))?.slice(6).trim(), raw = lines.find((line) => line.startsWith("data:"))?.slice(5).trim(); if (!event || !raw) continue; const data = JSON.parse(raw);
-        if (event === "meta") { modelBadge.textContent = data.display_name || data.model; setExecutionState(assistant, "processing", cleanContent); }
+        if (event === "meta") { actualModel = data.model_id || data.model || actualModel; modelBadge.textContent = data.display_name || data.model; setExecutionState(assistant, "processing", cleanContent); }
         if (event === "delta") { received += data.content; renderRichContent(rich, received); const cursor = document.createElement("span"); cursor.className = "cursor"; rich.append(cursor); scrollToBottom(); }
         if (event === "done") setExecutionState(assistant, "complete", cleanContent);
         if (event === "error") { failed = true; renderRichContent(rich, data.message); assistant.classList.add("error"); setExecutionState(assistant, "failed", cleanContent); notify(data.message || "模型连接失败", "error"); }
@@ -256,7 +287,7 @@ async function sendMessage(content) {
   } catch (error) { failed = true; const message = error.name === "AbortError" ? "已停止生成。" : error.message || "网络连接失败，请稍后重试。"; renderRichContent(rich, message); assistant.classList.add("error"); setExecutionState(assistant, "failed", cleanContent); notify(message, error.name === "AbortError" ? "system" : "error"); }
   finally {
     rich.querySelector(".cursor")?.remove(); assistant.classList.remove("streaming");
-    if (!failed && received) { state.currentMessages.push({ role: "assistant", content: received, model: modelBadge.textContent, created_at: new Date().toISOString() }); assistant.querySelector(".message-body").append(createAssistantActions(received, cleanContent)); }
+    if (!failed && received) { state.currentMessages.push({ role: "assistant", content: received, model: actualModel, created_at: new Date().toISOString() }); assistant.querySelector(".message-body").append(createAssistantActions(received, cleanContent)); }
     state.abortController = null; setGenerating(false); syncModelStatus(failed ? "error" : "available");
     if (state.conversationId) { const conversation = await request(`/api/conversations/${state.conversationId}`); setHeaderTitle(conversation.title); }
     await refreshConversations(); inputEl.focus();
@@ -273,6 +304,7 @@ function normalizePersonalization(value = {}) {
     font_scale: ["small", "standard", "large", "xlarge"].includes(value.font_scale) ? value.font_scale : "standard",
     default_model: ["deepseek", "terra"].includes(value.default_model) ? value.default_model : "deepseek",
     reasoning_preference: ["fast", "balanced", "deep"].includes(value.reasoning_preference) ? value.reasoning_preference : "balanced",
+    manual_reasoning_preferences: Object.fromEntries(Object.entries(value.manual_reasoning_preferences || {}).filter(([modelId, effort]) => typeof modelId === "string" && typeof effort === "string" && modelId && effort)),
     chat_density: value.chat_density === "compact" ? "compact" : "comfortable",
     show_message_time: boolValue(value.show_message_time, true),
     enter_to_send: boolValue(value.enter_to_send, true),
@@ -293,7 +325,7 @@ function applyPersonalization(value, options = {}) {
   setHeaderTitle(state.currentTitle);
   if (options.selectDefault) {
     const option = modelSelect.querySelector(`option[value="${state.personalization.default_model}"]`);
-    if (option && !option.disabled) { modelSelect.value = state.personalization.default_model; syncTerraControl(); syncModelStatus(); }
+    if (option && !option.disabled) { modelSelect.value = state.personalization.default_model; renderManualReasoning(); syncModelStatus(); }
   }
   renderPersonalizationControls(); applyAllAvatars(); updateComposerHint();
 }
@@ -305,7 +337,7 @@ function renderPersonalizationControls() {
   markSelected("#color-scheme-options [data-color-scheme]", "colorScheme", state.personalization.color_scheme);
   markSelected("#assistant-avatar-options [data-assistant-avatar]", "assistantAvatar", state.personalization.assistant_avatar);
   markSelected("#font-scale-options [data-font-scale]", "fontScale", state.personalization.font_scale);
-  markSelected("#reasoning-preference-options [data-reasoning-preference]", "reasoningPreference", state.personalization.reasoning_preference);
+  renderManualReasoning();
   markSelected("#chat-density-options [data-chat-density]", "chatDensity", state.personalization.chat_density);
   const defaultModel = $("#default-model-setting"); if (defaultModel) defaultModel.value = state.personalization.default_model;
   const showTime = $("#show-message-time"); if (showTime) showTime.checked = state.personalization.show_message_time;
@@ -355,13 +387,12 @@ inputEl.addEventListener("keydown", (event) => {
   const shouldSend = state.personalization.enter_to_send || event.ctrlKey || event.metaKey;
   if (shouldSend) { event.preventDefault(); $("#chat-form").requestSubmit(); }
 });
-$("#new-chat").onclick = startDraft; $("#open-archived").onclick = () => showView("archived"); $("#open-trash").onclick = () => showView("trash"); $("#back-to-history").onclick = startDraft; $("#empty-trash").onclick = emptyTrash; $("#history-search").addEventListener("input", scheduleGlobalSearch); $("#sidebar-toggle").onclick = () => setSidebarCollapsed(!state.sidebarCollapsed); $("#edit-title").onclick = updateCurrentTitle; stopButton.onclick = () => state.abortController?.abort(); modelSelect.onchange = () => { syncTerraControl(); syncModelStatus(); };
+$("#new-chat").onclick = startDraft; $("#open-archived").onclick = () => showView("archived"); $("#open-trash").onclick = () => showView("trash"); $("#back-to-history").onclick = startDraft; $("#empty-trash").onclick = emptyTrash; $("#history-search").addEventListener("input", scheduleGlobalSearch); $("#sidebar-toggle").onclick = () => setSidebarCollapsed(!state.sidebarCollapsed); $("#edit-title").onclick = updateCurrentTitle; stopButton.onclick = () => state.abortController?.abort(); modelSelect.onchange = () => { renderManualReasoning(); syncModelStatus(); };
 $("#open-settings").onclick = () => openSettings().catch((error) => notify(error.message || "设置加载失败", "error")); $("#close-settings").onclick = () => $("#settings-dialog").close(); document.querySelectorAll("[data-settings-tab]").forEach((tab) => tab.onclick = () => activateSettingsTab(tab.dataset.settingsTab));
 document.querySelectorAll('input[name="theme-mode"]').forEach((input) => input.onchange = () => choosePersonalization({ theme_mode: input.value }));
 document.querySelectorAll("#color-scheme-options [data-color-scheme]").forEach((button) => button.onclick = () => choosePersonalization({ color_scheme: button.dataset.colorScheme }));
 document.querySelectorAll("#assistant-avatar-options [data-assistant-avatar]").forEach((button) => button.onclick = () => choosePersonalization({ assistant_avatar: button.dataset.assistantAvatar }));
 document.querySelectorAll("#font-scale-options [data-font-scale]").forEach((button) => button.onclick = () => choosePersonalization({ font_scale: button.dataset.fontScale }));
-document.querySelectorAll("#reasoning-preference-options [data-reasoning-preference]").forEach((button) => button.onclick = () => choosePersonalization({ reasoning_preference: button.dataset.reasoningPreference }));
 document.querySelectorAll("#chat-density-options [data-chat-density]").forEach((button) => button.onclick = () => choosePersonalization({ chat_density: button.dataset.chatDensity }));
 $("#default-model-setting").onchange = (event) => choosePersonalization({ default_model: event.target.value });
 $("#show-message-time").onchange = (event) => choosePersonalization({ show_message_time: event.target.checked });

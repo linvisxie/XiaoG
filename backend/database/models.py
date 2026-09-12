@@ -17,7 +17,7 @@ class ConversationTitleUpdate(BaseModel):
 class ChatRequest(BaseModel):
     content: str = Field(min_length=1, max_length=30000)
     model_preference: str = Field(default="auto", pattern="^(auto|deepseek|terra)$")
-    terra_reasoning_effort: str | None = Field(default=None, pattern="^(low|medium|high)$")
+    reasoning_effort: str | None = Field(default=None, max_length=32)
 
 
 class SettingsUpdate(BaseModel):
@@ -36,8 +36,24 @@ class PersonalizationSettingsUpdate(BaseModel):
     default_model: str | None = Field(default=None, pattern="^(deepseek|terra)$")
     reasoning_preference: str | None = Field(default=None, pattern="^(fast|balanced|deep)$")
     chat_density: str | None = Field(default=None, pattern="^(comfortable|compact)$")
+    manual_reasoning_preferences: dict[str, str] | None = None
     show_message_time: bool | None = None
     enter_to_send: bool | None = None
+    @field_validator("manual_reasoning_preferences")
+    @classmethod
+    def validate_manual_reasoning_preferences(cls, value: dict[str, str] | None) -> dict[str, str] | None:
+        if value is None:
+            return value
+        if len(value) > 20:
+            raise ValueError("推理档位偏好数量过多。")
+        normalized: dict[str, str] = {}
+        for model_id, effort in value.items():
+            if not isinstance(model_id, str) or not isinstance(effort, str):
+                raise ValueError("推理档位偏好格式无效。")
+            if not model_id or len(model_id) > 120 or not effort or len(effort) > 32:
+                raise ValueError("推理档位偏好内容无效。")
+            normalized[model_id] = effort
+        return normalized
     animations_enabled: bool | None = None
     ui_language: str | None = Field(default=None, pattern="^(zh-CN|en)$")
 

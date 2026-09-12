@@ -10,6 +10,10 @@ class ProviderError(Exception):
     """A safe, user-facing provider error."""
 
 
+class ReasoningEffortError(ProviderError):
+    """The requested reasoning effort is not supported by the selected model."""
+
+
 @dataclass
 class ProviderStatus:
     provider: str

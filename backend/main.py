@@ -16,7 +16,7 @@ from backend.database.db import initialize_database
 from backend.database.models import ChatRequest, ConversationCreate, ConversationTitleUpdate, SettingsUpdate
 from backend.database.models import PersonalizationSettingsUpdate
 from backend.pricing import estimate_deepseek_cost
-from backend.providers.base import ProviderError
+from backend.providers.base import ProviderError, ReasoningEffortError
 from backend.router.model_router import model_router
 from backend.services.codex_app_server_manager import codex_app_server_manager
 from backend.services.conversation_service import conversation_service
@@ -206,35 +206,40 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
     content = payload.content.strip()
     if not content:
         raise HTTPException(status_code=422, detail="消息不能为空。")
+
+    try:
+        provider, display_name, selected_effort, model_metadata = await model_router.select_manual(
+            payload.model_preference, payload.reasoning_effort
+        )
+    except ReasoningEffortError as exc:
+        raise HTTPException(status_code=422, detail={"code": "unsupported_reasoning_effort", "message": str(exc)}) from exc
+    except ProviderError as exc:
+        raise HTTPException(status_code=503, detail={"code": "provider_unavailable", "message": str(exc)}) from exc
+
     user_message = conversation_service.add_message(conversation_id, "user", content)
     conversation_service.set_title_from_first_message(conversation_id, content)
-
     async def generate():
         answer = ""
         usage = None
-        actual_model = settings.deepseek_model_id
-        provider_name = "deepseek"
-        billing_type = "api"
+        actual_model = model_metadata["model_id"]
+        provider_name = provider.name
+        billing_type = getattr(provider, "billing_type", "api")
         started = time.perf_counter()
         try:
-            provider, display_name = await model_router.select(payload.model_preference)
-            provider_name = provider.name
-            actual_model = getattr(provider, "model_id", actual_model)
-            billing_type = getattr(provider, "billing_type", "api")
             system_prompt = conversation_service.get_setting("system_prompt")
             profile = memory_service.get_user_profile()
             memories = memory_service.get_relevant_memories(content)
             model_messages = conversation_service.build_model_messages(conversation_id, system_prompt, profile, memories)
-            yield event_stream("meta", {"provider": provider.name, "model": actual_model, "display_name": display_name, "reasoning_effort": payload.terra_reasoning_effort if payload.model_preference == "terra" else None})
+            yield event_stream("meta", {"provider": provider.name, "provider_id": model_metadata["provider_id"], "model": actual_model, "model_id": actual_model, "display_name": display_name, "reasoning_effort": selected_effort})
             stream = (
                 provider.stream_chat(
                     model_messages,
-                    payload.terra_reasoning_effort,
+                    selected_effort,
                     conversation_id=conversation_id,
                     user_message_id=user_message["id"],
                 )
                 if provider.name == "openai_codex"
-                else provider.stream_chat(model_messages, payload.terra_reasoning_effort)
+                else provider.stream_chat(model_messages, selected_effort)
             )
             async for item in stream:
                 if item["type"] == "delta":
@@ -249,7 +254,7 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
             conversation_service.add_message(conversation_id, "assistant", answer, provider_name, actual_model)
             cost = estimate_deepseek_cost(actual_model, usage) if provider.name == "deepseek" else None
             conversation_service.record_usage(conversation_id, provider_name, actual_model, usage, cost, latency_ms, billing_type)
-            yield event_stream("done", {"provider": provider.name, "model": actual_model, "display_name": display_name, "usage": usage, "latency_ms": latency_ms})
+            yield event_stream("done", {"provider": provider.name, "provider_id": model_metadata["provider_id"], "model": actual_model, "model_id": actual_model, "display_name": display_name, "reasoning_effort": selected_effort, "usage": usage, "latency_ms": latency_ms})
         except asyncio.CancelledError:
             # A browser-side Stop cancels the request. Save any content already received.
             if answer:

@@ -1,4 +1,5 @@
 """XiaoG's conversation store. Providers never own the user's history."""
+import json
 
 from uuid import uuid4
 
@@ -237,7 +238,20 @@ class ConversationService:
             conn.execute("UPDATE settings SET value = ?, updated_at = ? WHERE key = 'system_prompt'", (system_prompt, timestamp))
             conn.execute("UPDATE settings SET value = ?, updated_at = ? WHERE key = 'user_profile'", (user_profile, timestamp))
 
-    def get_personalization_settings(self) -> dict[str, str | bool]:
+    def get_manual_reasoning_preferences(self) -> dict[str, str]:
+        try:
+            raw = json.loads(self.get_setting("manual_reasoning_preferences") or "{}")
+        except json.JSONDecodeError:
+            return {}
+        if not isinstance(raw, dict):
+            return {}
+        return {
+            model_id: effort
+            for model_id, effort in raw.items()
+            if isinstance(model_id, str) and isinstance(effort, str) and model_id and effort
+        }
+
+    def get_personalization_settings(self) -> dict[str, str | bool | dict[str, str]]:
         def setting_bool(key: str, default: bool) -> bool:
             value = self.get_setting(key).strip().lower()
             return default if value not in {"true", "false"} else value == "true"
@@ -251,17 +265,18 @@ class ConversationService:
             "default_model": self.get_setting("default_model") or "deepseek",
             "reasoning_preference": self.get_setting("reasoning_preference") or "balanced",
             "chat_density": self.get_setting("chat_density") or "comfortable",
+            "manual_reasoning_preferences": self.get_manual_reasoning_preferences(),
             "show_message_time": setting_bool("show_message_time", True),
             "enter_to_send": setting_bool("enter_to_send", True),
             "animations_enabled": setting_bool("animations_enabled", True),
             "ui_language": self.get_setting("ui_language") or "zh-CN",
         }
 
-    def update_personalization_settings(self, values: dict[str, str | bool | None]) -> None:
+    def update_personalization_settings(self, values: dict[str, str | bool | dict[str, str] | None]) -> None:
         allowed = {
             "theme_mode", "color_scheme", "assistant_avatar", "user_avatar", "font_scale",
-            "default_model", "reasoning_preference", "chat_density", "show_message_time",
-            "enter_to_send", "animations_enabled", "ui_language",
+            "default_model", "reasoning_preference", "manual_reasoning_preferences", "chat_density",
+            "show_message_time", "enter_to_send", "animations_enabled", "ui_language",
         }
         with get_connection() as conn:
             timestamp = now_iso()
@@ -271,7 +286,7 @@ class ConversationService:
                 conn.execute(
                     "INSERT INTO settings(key, value, updated_at) VALUES (?, ?, ?) "
                     "ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at",
-                    (key, str(value).lower() if isinstance(value, bool) else value, timestamp),
+                    (key, json.dumps(value, ensure_ascii=False, separators=(",", ":")) if key == "manual_reasoning_preferences" else str(value).lower() if isinstance(value, bool) else value, timestamp),
                 )
 
 

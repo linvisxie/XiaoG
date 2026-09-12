@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from backend.config import settings
-from backend.providers.base import ModelProvider, ProviderError, ProviderStatus
+from backend.providers.base import ModelProvider, ProviderError, ProviderStatus, ReasoningEffortError
 from backend.providers.terra import TERRA_MODEL_ID
 
 
@@ -77,10 +77,31 @@ class ModelRegistry:
                 "models": models_by_key[selection_key],
                 "details": self._safe_details(status.details),
             }
-        # Auto remains an unimplemented product entry in v0.4.0.
+        # Auto remains an unimplemented product entry in v0.4.1.
         result["auto"] = {"available": False, "message": "Auto Router 尚未实现。"}
         result["registry"] = registry
         return result
+
+    async def resolve_manual_reasoning(self, selection_key: str, requested_effort: str | None) -> tuple[ProviderStatus, dict[str, Any], str | None]:
+        """Resolve a manual selection against the selected model's live metadata."""
+        if selection_key not in self._definitions:
+            raise ReasoningEffortError("请选择可用模型后再设置推理档位。")
+        status = (await self._provider_states())[selection_key]
+        model = self._models_for(selection_key, status)[0]
+        if not model["availability"]:
+            raise ProviderError(status.message)
+        supported = model["supported_reasoning_efforts"]
+        if not supported:
+            if requested_effort:
+                raise ReasoningEffortError("当前模型不支持推理档位选择。")
+            return status, model, None
+        effort = requested_effort or model["default_reasoning_effort"]
+        if effort not in supported:
+            raise ReasoningEffortError(
+                f"当前模型不支持推理档位“{effort}”。请刷新模型状态后重试。"
+            )
+        return status, model, effort
+
 
     def display_name_for_selection(self, selection_key: str) -> str:
         if selection_key == "deepseek":
@@ -136,8 +157,8 @@ class ModelRegistry:
             "streaming": True,
             "reasoning_supported": True if known else None,
             "supported_reasoning_efforts": ["none", "low", "high", "max"] if known else [],
-            # XiaoG currently intentionally sends thinking=disabled; v0.4.0 does not alter it.
-            "default_reasoning_effort": "none" if known else None,
+            # DeepSeek documents enabled thinking with a default effort of high.
+            "default_reasoning_effort": "high" if known else None,
             "vision": False if known else None,
             "audio": False if known else None,
             "tool_use": True if known else None,

@@ -1,14 +1,15 @@
 {
   "name": "XiaoG",
-  "version": "0.4.0",
-  "phase": "Phase 5 - Provider & Model Capability Registry",
+  "version": "0.4.1",
+  "phase": "Phase 5 - Dynamic Manual Reasoning",
   "models": ["DeepSeek V4 Flash", "GPT-5.6 Terra"],
   "capabilities": [
     "对话与流式输出",
     "本机 SQLite 历史、置顶、归档与回收站",
     "全局会话搜索（标题、用户消息、AI消息与定位）",
     "DeepSeek 与 GPT-5.6 Terra 的 Provider / Model / Capability Registry",
-    "DeepSeek V4 Flash 与 GPT-5.6 Terra 手动切换",
+    "DeepSeek V4 Flash 与 GPT-5.6 Terra 的手动模型与推理档位选择",
+    "根据 Model Registry 动态生成的 Manual Reasoning 选择器与按模型保存的推理偏好",
     "Terra 长期 Codex App Server 与同会话 thread 复用",
     "主题、配色、头像与显示设置",
     "简体中文与 English 软件界面切换",
@@ -24,6 +25,7 @@
     "附件、语音和富媒体卡片目前仅提供界面入口或预留结构"
   ],
   "changelog": [
+    {"version": "0.4.1", "title": "Dynamic manual reasoning", "items": ["推理档位选择器由 Model Registry 的真实能力动态生成", "DeepSeek V4 Flash 支持 None、Low、High、Max；GPT-5.6 Terra 支持 Low、Medium、High、Extra High、Max、Ultra", "每个模型分别保存最近一次手动推理选择；Auto Router 仍未实现"]},
     {"version": "0.4.0", "title": "Provider and model capability registry", "items": ["建立统一 Provider Registry、Model Registry 与 Capability System", "模型显示名和实时可用状态由 Registry 提供", "记录 DeepSeek V4 Flash 与 GPT-5.6 Terra 的真实推理能力元数据，不改变现有 Provider 调用行为"]},
     {"version": "0.3.7.2", "title": "Stabilize header model controls", "items": ["模型标签、选择器、状态、Auto 与 Terra 推理区域使用独立稳定轨道", "切换模型不再改变模型标签或选择器的横向位置"]},
     {"version": "0.3.7.1", "title": "Remove user message label hotfix", "items": ["刷新页面时强制加载已移除用户消息发送者标签的前端渲染器", "实际浏览器验证新消息、历史消息、会话切换、刷新与中英文界面均不显示“你”或 You"]},

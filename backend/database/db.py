@@ -127,6 +127,7 @@ def initialize_database() -> None:
             ("font_scale", "standard"),
             ("default_model", "deepseek"),
             ("reasoning_preference", "balanced"),
+            ("manual_reasoning_preferences", "{}"),
             ("chat_density", "comfortable"),
             ("show_message_time", "true"),
             ("enter_to_send", "true"),

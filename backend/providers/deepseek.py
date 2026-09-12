@@ -32,14 +32,19 @@ class DeepSeekProvider(ModelProvider):
             raise ProviderError("DeepSeek API尚未配置。请在 .env 中填写 DEEPSEEK_API_KEY 后重启小G。")
         return {"Authorization": f"Bearer {settings.deepseek_api_key}", "Content-Type": "application/json"}
 
-    def _payload(self, messages: list[dict[str, str]], stream: bool) -> dict:
-        return {
+    def _payload(self, messages: list[dict[str, str]], stream: bool, reasoning_effort: str | None = None) -> dict:
+        payload = {
             "model": settings.deepseek_model_id,
             "messages": messages,
             "stream": stream,
             "stream_options": {"include_usage": True} if stream else None,
-            "thinking": {"type": "disabled"},
         }
+        if reasoning_effort in (None, "none"):
+            payload["thinking"] = {"type": "disabled"}
+        else:
+            payload["thinking"] = {"type": "enabled"}
+            payload["reasoning_effort"] = reasoning_effort
+        return payload
 
     @staticmethod
     def _friendly_error(status_code: int, body: str) -> str:
@@ -59,7 +64,7 @@ class DeepSeekProvider(ModelProvider):
         timeout = httpx.Timeout(connect=15.0, read=180.0, write=30.0, pool=30.0)
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
-                async with client.stream("POST", url, headers=self._headers(), json=self._payload(messages, True)) as response:
+                async with client.stream("POST", url, headers=self._headers(), json=self._payload(messages, True, reasoning_effort)) as response:
                     if response.status_code >= 400:
                         body = await response.aread()
                         raise ProviderError(self._friendly_error(response.status_code, body.decode("utf-8", "ignore")))
