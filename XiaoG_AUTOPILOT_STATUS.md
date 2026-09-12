@@ -13,11 +13,11 @@ Current Branch: main
 Start Accepted Baseline: v0.4.0 / 7ddab006a618ede56e3d22d55ba2f212d8f47cd0
 Last Accepted Stable Baseline: v0.4.1 / b0632f273ddb5310fe59e580bfb06bad067e7026
 Current Candidate: none
-Last Checkpoint: v0.4.1 Candidate accepted after Product Owner experience and Candidate Provenance Check.
+Last Checkpoint: v0.4.2 Auto Router rules checkpoint / 7800eab0a72e17b5b5732e31faacafd7f1e14c2c.
 Working Tree: clean; HEAD contains only a status update after the committed v0.4.1 runtime Candidate.
-Runtime Identity: XiaoG backend listening on 127.0.0.1:8000 as uvicorn PID 21928; v0.4.1 candidate runtime b0632f2 is active.
-Tests Completed: Python compileall; JS syntax; duplicate-ID, diff, sensitive-diff and SQLite integrity checks; registry metadata; browser selector switching and persistence through reload/restart; DeepSeek none/low/high/max live SSE; Terra low/medium/high/xhigh/max/ultra serial validation with accepted metadata, Low text delta, terminal cleanup, and no new provider errors; structured invalid-effort rejection; data baseline restoration; Candidate Provenance Check passed (commit exists, hash matches prior STATUS, reachable from main, only status metadata followed Candidate, runtime HTTP 200).
-Tests Pending: v0.4.2 implementation and stage verification.
+Runtime Identity: XiaoG backend listening on 127.0.0.1:8000 as uvicorn PID 13648; v0.4.2 checkpoint runtime 7800eab is active.
+Tests Completed: Python compileall; JS syntax; duplicate-ID, diff, sensitive-diff and SQLite integrity checks; registry metadata; browser selector switching and persistence through reload/restart; DeepSeek none/low/high/max live SSE; Terra low/medium/high/xhigh/max/ultra serial validation with accepted metadata, Low text delta, terminal cleanup, and no new provider errors; structured invalid-effort rejection; data baseline restoration; Candidate Provenance Check passed (commit exists, hash matches prior STATUS, reachable from main, only status metadata followed Candidate, runtime HTTP 200). v0.4.2 checkpoint: Python compileall; JS syntax; simple/complex local routing assertions; health and about endpoints; real Registry Auto/DeepSeek/Terra availability.
+Tests Pending: v0.4.2 end-to-end Auto routing, review, final regression, and Product Owner experience validation.
 Known Issues: Higher Terra reasoning efforts naturally take longer to complete; no release-blocking implementation defect was found.
 Blockers: none
 Backlog / Future Suggestions: none
