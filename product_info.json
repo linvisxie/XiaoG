@@ -1,6 +1,6 @@
 {
   "name": "XiaoG",
-  "version": "0.3.7",
+  "version": "0.3.7.1",
   "phase": "Phase 4.5-B3 Pre-Phase-5 Final Consistency Patch",
   "models": ["DeepSeek V4 Flash", "GPT-5.6 Terra"],
   "capabilities": [
@@ -23,6 +23,7 @@
     "附件、语音和富媒体卡片目前仅提供界面入口或预留结构"
   ],
   "changelog": [
+    {"version": "0.3.7.1", "title": "Remove user message label hotfix", "items": ["刷新页面时强制加载已移除用户消息发送者标签的前端渲染器", "实际浏览器验证新消息、历史消息、会话切换、刷新与中英文界面均不显示“你”或 You"]},
     {"version": "0.3.7", "title": "UI and model identity consistency", "items": ["移除用户消息上方的“你”标签", "设置、侧栏与 AI 消息统一使用 assistant_avatar", "DeepSeek 以 DeepSeek V4 Flash 显示，保留真实 model_id"]},
     {"version": "0.3.6", "title": "Pre-Phase-5 refinement baseline", "items": ["产品状态在聊天中可基于实时项目资料回答", "统一界面对齐与中英文界面切换", "Persona 与用户资料归入个性化设置"]},
     {"version": "0.3.5", "title": "Global Search v1 completion", "items": ["统一 Search Service 入口", "会话标题、用户消息与 AI 消息搜索", "搜索结果可直接定位匹配消息"]},
