@@ -19,7 +19,12 @@ async function request(url, options = {}) {
   if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.detail || "请求失败，请稍后重试。"); }
   return response.status === 204 ? null : response.json();
 }
-function modelLabel(model) { if (model === "gpt-5.6-terra") return "GPT-5.6 Terra"; if ((model || "").toLowerCase().startsWith("deepseek")) return "DeepSeek"; return model || "DeepSeek"; }
+function modelLabel(model) {
+  const normalized = (model || "").toLowerCase();
+  if (normalized === "gpt-5.6-terra") return "GPT-5.6 Terra";
+  if (normalized.startsWith("deepseek")) return "DeepSeek V4 Flash";
+  return model || "DeepSeek V4 Flash";
+}
 function notify(message, type = "system") { const service = window.XiaoGNotification, localized = window.XiaoGI18n?.t(message) || message; if (service?.[type]) return service[type](localized); return service?.system(localized); }
 function showToast(message, type = "system") { return notify(message, type); }
 function safeHttpUrl(value) { try { const url = new URL(value, window.location.href); return ["http:", "https:"].includes(url.protocol) ? url.href : null; } catch { return null; } }
@@ -76,16 +81,27 @@ function avatarPreset(value) { return {
   default: ["G", "preset-default", "小G默认头像"], mario: ["M", "preset-mario", "马里奥头像"], pikachu: ["⚡", "preset-pikachu", "皮卡丘头像"], stitch: ["✦", "preset-stitch", "史迪奇头像"],
   compass: ["◈", "preset-compass", "罗盘头像"], cloud: ["☁", "preset-cloud", "云朵头像"], moon: ["☾", "preset-moon", "月亮头像"], spark: ["✧", "preset-spark", "星光头像"],
 }[value] || ["G", "preset-default", "小G默认头像"]; }
+function isCustomAvatar(value) { return typeof value === "string" && value.startsWith("data:image/"); }
+function applyAssistantAvatarElement(element, baseClass) {
+  if (!element) return;
+  element.replaceChildren(); element.className = baseClass; element.removeAttribute("title");
+  if (isCustomAvatar(state.personalization.assistant_avatar)) {
+    const image = document.createElement("img"); image.src = state.personalization.assistant_avatar; image.alt = "小G头像"; element.append(image); return;
+  }
+  const [text, className, title] = avatarPreset(state.personalization.assistant_avatar);
+  element.classList.add(className); element.textContent = text; element.title = title;
+}
 function applyAvatarElement(element, role) {
-  element.replaceChildren(); element.className = "message-avatar";
-  if (role === "user") { element.classList.add("user-avatar"); if (state.personalization.user_avatar.startsWith("data:image/")) { const image = document.createElement("img"); image.src = state.personalization.user_avatar; image.alt = "用户头像"; element.append(image); } else element.textContent = "U"; return; }
-  const [text, className, title] = avatarPreset(state.personalization.assistant_avatar); element.classList.add(className); element.textContent = text; element.title = title;
+  if (role !== "user") { applyAssistantAvatarElement(element, "message-avatar"); return; }
+  element.replaceChildren(); element.className = "message-avatar user-avatar";
+  if (isCustomAvatar(state.personalization.user_avatar)) { const image = document.createElement("img"); image.src = state.personalization.user_avatar; image.alt = "用户头像"; element.append(image); } else element.textContent = "U";
 }
 function applyAllAvatars() {
   document.querySelectorAll(".message.assistant .message-avatar").forEach((el) => applyAvatarElement(el, "assistant"));
   document.querySelectorAll(".message.user .message-avatar").forEach((el) => applyAvatarElement(el, "user"));
-  const emptyLogo = $(".empty-logo"); if (emptyLogo) { const [text, className] = avatarPreset(state.personalization.assistant_avatar); emptyLogo.textContent = text; emptyLogo.className = `empty-logo ${className}`; }
-  const preview = $("#assistant-avatar-preview"); if (preview) { const [text, className, title] = avatarPreset(state.personalization.assistant_avatar); preview.textContent = text; preview.className = `assistant-avatar-preview ${className}`; preview.title = title; }
+  applyAssistantAvatarElement($(".brand-mark"), "brand-mark");
+  applyAssistantAvatarElement($(".empty-logo"), "empty-logo");
+  applyAssistantAvatarElement($("#assistant-avatar-preview"), "assistant-avatar-preview");
 }
 function formatMessageTime(value) {
   const date = value ? new Date(value) : new Date(); if (Number.isNaN(date.getTime())) return "";
@@ -108,7 +124,9 @@ function messageElement(message, streaming = false, sourcePrompt = "") {
   const article = document.createElement("article"); article.className = `message ${message.role}${streaming ? " streaming" : ""}`; article.tabIndex = -1; if (message.id) article.dataset.messageId = message.id;
   const avatar = document.createElement("div"); applyAvatarElement(avatar, message.role);
   const body = document.createElement("div"); body.className = "message-body"; const meta = document.createElement("div"); meta.className = "message-meta";
-  const author = document.createElement("span"); author.textContent = message.role === "assistant" ? "小G" : "你"; const timestamp = document.createElement("time"); timestamp.className = "message-time"; timestamp.dateTime = message.created_at || new Date().toISOString(); timestamp.textContent = formatMessageTime(message.created_at); meta.append(author, timestamp);
+  const timestamp = document.createElement("time"); timestamp.className = "message-time"; timestamp.dateTime = message.created_at || new Date().toISOString(); timestamp.textContent = formatMessageTime(message.created_at);
+  if (message.role === "assistant") { const author = document.createElement("span"); author.textContent = "小G"; meta.append(author, timestamp); }
+  else meta.append(timestamp);
   const bubble = document.createElement("div"); bubble.className = "message-content"; const rich = document.createElement("div"); rich.className = "rich-content"; renderRichContent(rich, message.content || ""); bubble.append(rich);
   if (message.role === "assistant") { const badge = document.createElement("span"); badge.className = "message-model"; badge.textContent = modelLabel(message.model); bubble.append(badge); const status = document.createElement("div"); status.className = "message-status"; body.append(meta, bubble, status); if (streaming) setTimeout(() => setExecutionState(article, "parsing", sourcePrompt)); else body.append(createAssistantActions(message.content || "", sourcePrompt)); }
   else body.append(meta, bubble);
@@ -213,13 +231,13 @@ function renderTerraEfforts(details = {}) {
   syncTerraControl();
 }
 function syncTerraControl() { $("#terra-effort-control").classList.toggle("reserved", modelSelect.value !== "terra" || !state.terraEfforts.length); }
-function syncModelStatus(forcedState) { const key = modelSelect.value, label = key === "terra" ? "Terra" : "DeepSeek", available = state.providerStatus?.[key]?.available !== false, status = forcedState || (available ? "available" : "error"), element = $("#model-status"); element.className = `model-status ${status}`; $("#model-status-label").textContent = label; }
-async function loadProviderStatus() { try { const status = await request("/api/provider-status"); state.providerStatus = status; const terra = modelSelect.querySelector('option[value="terra"]'), defaultTerra = $("#default-model-setting")?.querySelector('option[value="terra"]'); terra.disabled = !status.terra.available; if (defaultTerra) defaultTerra.disabled = !status.terra.available; terra.textContent = status.terra.available ? "GPT-5.6 Terra" : "当前账户未提供 GPT-5.6 Terra"; if (!status.terra.available && modelSelect.value === "terra") modelSelect.value = "deepseek"; $("#provider-note").textContent = status.terra.available ? "Terra 可用；可在右侧切换模型。" : status.terra.message; renderTerraEfforts(status.terra.details || {}); syncModelStatus(); } catch { $("#provider-note").textContent = "无法读取模型状态。"; syncModelStatus("error"); notify("模型连接状态读取失败", "error"); } }
+function syncModelStatus(forcedState) { const key = modelSelect.value, label = key === "terra" ? "GPT-5.6 Terra" : "DeepSeek V4 Flash", available = state.providerStatus?.[key]?.available !== false, status = forcedState || (available ? "available" : "error"), element = $("#model-status"); element.className = `model-status ${status}`; $("#model-status-label").textContent = label; }
+async function loadProviderStatus() { try { const status = await request("/api/provider-status"); state.providerStatus = status; const deepseekName = status.deepseek?.models?.[0]?.display_name || "DeepSeek V4 Flash", deepseek = modelSelect.querySelector('option[value="deepseek"]'), defaultDeepseek = $("#default-model-setting")?.querySelector('option[value="deepseek"]'), terra = modelSelect.querySelector('option[value="terra"]'), defaultTerra = $("#default-model-setting")?.querySelector('option[value="terra"]'); if (deepseek) deepseek.textContent = deepseekName; if (defaultDeepseek) defaultDeepseek.textContent = deepseekName; terra.disabled = !status.terra.available; if (defaultTerra) defaultTerra.disabled = !status.terra.available; terra.textContent = status.terra.available ? "GPT-5.6 Terra" : "当前账户未提供 GPT-5.6 Terra"; if (!status.terra.available && modelSelect.value === "terra") modelSelect.value = "deepseek"; $("#provider-note").textContent = status.terra.available ? "Terra 可用；可在右侧切换模型。" : status.terra.message; renderTerraEfforts(status.terra.details || {}); syncModelStatus(); } catch { $("#provider-note").textContent = "无法读取模型状态。"; syncModelStatus("error"); notify("模型连接状态读取失败", "error"); } }
 async function sendMessage(content) {
   if (!content.trim() || state.generating || conversationRestricted()) return;
   if (!state.conversationId) { const conversation = await request("/api/conversations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }); state.conversationId = conversation.id; state.currentTitle = conversation.title; await refreshConversations(); }
   state.autoScroll = true; syncScrollControls(); const cleanContent = content.trim(), createdAt = new Date().toISOString(); state.currentMessages.push({ role: "user", content: cleanContent, created_at: createdAt }); addMessage({ role: "user", content: cleanContent, created_at: createdAt }, false, true); inputEl.value = ""; resizeInput(); setGenerating(true);
-  const assistant = addMessage({ role: "assistant", content: "", model: modelSelect.value === "terra" ? "gpt-5.6-terra" : "DeepSeek" }, true, true, cleanContent), rich = assistant.querySelector(".rich-content"), modelBadge = assistant.querySelector(".message-model"); state.abortController = new AbortController(); let received = "", failed = false;
+  const assistant = addMessage({ role: "assistant", content: "", model: modelSelect.value === "terra" ? "gpt-5.6-terra" : "deepseek-v4-flash" }, true, true, cleanContent), rich = assistant.querySelector(".rich-content"), modelBadge = assistant.querySelector(".message-model"); state.abortController = new AbortController(); let received = "", failed = false;
   try {
     const response = await fetch(`/api/conversations/${state.conversationId}/chat`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ content: cleanContent, model_preference: modelSelect.value, terra_reasoning_effort: modelSelect.value === "terra" ? state.terraEffort : null }), signal: state.abortController.signal });
     if (!response.ok) { const data = await response.json().catch(() => ({})); throw new Error(data.detail || "消息发送失败。"); }
@@ -249,7 +267,7 @@ function normalizePersonalization(value = {}) {
   return {
     theme_mode: value.theme_mode === "dark" ? "dark" : "light",
     color_scheme: ["green", "blue", "purple"].includes(value.color_scheme) ? value.color_scheme : "green",
-    assistant_avatar: ["default", "mario", "pikachu", "stitch", "compass", "cloud", "moon", "spark"].includes(value.assistant_avatar) ? value.assistant_avatar : "default",
+    assistant_avatar: isCustomAvatar(value.assistant_avatar) || ["default", "mario", "pikachu", "stitch", "compass", "cloud", "moon", "spark"].includes(value.assistant_avatar) ? value.assistant_avatar : "default",
     user_avatar: value.user_avatar?.startsWith("data:image/") ? value.user_avatar : "default",
     font_scale: ["small", "standard", "large", "xlarge"].includes(value.font_scale) ? value.font_scale : "standard",
     default_model: ["deepseek", "terra"].includes(value.default_model) ? value.default_model : "deepseek",
@@ -350,6 +368,7 @@ $("#enter-to-send").onchange = (event) => choosePersonalization({ enter_to_send:
 $("#animations-enabled").onchange = (event) => choosePersonalization({ animations_enabled: event.target.checked });
 $("#ui-language-setting").onchange = (event) => choosePersonalization({ ui_language: event.target.value }, "界面语言已保存");
 $("#reset-assistant-avatar").onclick = () => choosePersonalization({ assistant_avatar: "default" });
+$("#assistant-avatar-input").onchange = async (event) => { const file = event.target.files?.[0]; if (!file) return; try { const avatar = await cropAvatar(file); await choosePersonalization({ assistant_avatar: avatar }, "小G头像已裁剪并保存"); } catch (error) { notify(error.message || "小G头像上传失败", "error"); } finally { event.target.value = ""; } };
 $("#user-avatar-input").onchange = async (event) => { const file = event.target.files?.[0]; if (!file) return; try { const avatar = await cropAvatar(file); await choosePersonalization({ user_avatar: avatar }, "头像已裁剪并保存"); } catch (error) { notify(error.message || "头像上传失败", "error"); } finally { event.target.value = ""; } };
 $("#reset-user-avatar").onclick = async () => { await choosePersonalization({ user_avatar: "default" }, "用户头像已删除"); };
 document.querySelectorAll("[data-coming-soon]").forEach((button) => button.onclick = () => notify(button.dataset.comingSoon, "system"));

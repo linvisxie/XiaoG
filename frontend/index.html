@@ -37,8 +37,8 @@
         </div>
         <div class="model-controls" aria-label="模型设置">
           <div class="model-select-wrap">
-            <label class="model-select-label"><span>模型</span><select id="model-select" aria-label="选择模型"><option value="deepseek">DeepSeek</option><option value="terra">GPT-5.6 Terra</option></select></label>
-            <span id="model-status" class="model-status available" aria-live="polite"><span class="status-dot"></span><span id="model-status-label">DeepSeek</span></span>
+            <label class="model-select-label"><span>模型</span><select id="model-select" aria-label="选择模型"><option value="deepseek">DeepSeek V4 Flash</option><option value="terra">GPT-5.6 Terra</option></select></label>
+            <span id="model-status" class="model-status available" aria-live="polite"><span class="status-dot"></span><span id="model-status-label">DeepSeek V4 Flash</span></span>
             <button class="auto-tooltip" type="button" aria-label="Auto 模式说明">Auto ⓘ<span role="tooltip">Auto会根据任务复杂度自动选择合适模型。Phase 5 前不会参与模型调用。</span></button>
           </div>
           <div id="terra-effort-control" class="terra-effort" aria-label="Terra 推理档位"><span class="effort-label">推理</span><div id="terra-effort-options" class="segmented-control" role="group" aria-label="Terra reasoning effort"></div></div>
@@ -88,7 +88,7 @@
           <h3>个性化</h3>
           <div class="settings-group"><h4>模式</h4><div class="choice-row" role="radiogroup" aria-label="显示模式"><label class="select-card"><input type="radio" name="theme-mode" value="light" /> 原版模式</label><label class="select-card"><input type="radio" name="theme-mode" value="dark" /> 深色模式</label></div></div>
           <div class="settings-group"><h4>配色</h4><div id="color-scheme-options" class="choice-row" role="group" aria-label="界面配色"><button type="button" class="choice-button" data-color-scheme="green"><span class="color-swatch green"></span>绿色</button><button type="button" class="choice-button" data-color-scheme="blue"><span class="color-swatch blue"></span>蓝色</button><button type="button" class="choice-button" data-color-scheme="purple"><span class="color-swatch purple"></span>紫色</button></div></div>
-          <div class="settings-group avatar-setting-header"><div><h4>小G头像</h4><p class="dialog-tip">选择后可立即预览。</p></div><button id="reset-assistant-avatar" type="button" class="secondary compact">恢复默认</button></div>
+          <div class="settings-group avatar-setting-header"><div><h4>小G头像</h4><p class="dialog-tip">选择后可立即预览。</p></div><div class="avatar-setting-actions"><label class="upload-avatar-button" for="assistant-avatar-input">上传本地图片</label><input id="assistant-avatar-input" type="file" accept="image/png,image/jpeg,image/webp" hidden /><button id="reset-assistant-avatar" type="button" class="secondary compact">恢复默认</button></div></div>
           <div class="assistant-avatar-preview-wrap"><span id="assistant-avatar-preview" class="assistant-avatar-preview preset-default">G</span><span>聊天头像预览</span></div>
           <div id="assistant-avatar-options" class="avatar-options" role="group" aria-label="小G头像">
             <button type="button" class="avatar-option" data-assistant-avatar="default"><span class="avatar-sample preset-default">G</span>默认</button>
@@ -106,7 +106,7 @@
 
         <section class="settings-panel" data-settings-panel="intelligence">
           <h3>模型与智能</h3>
-          <div class="settings-group"><label class="field-label" for="default-model-setting">默认模型</label><select id="default-model-setting" class="settings-select"><option value="deepseek">DeepSeek</option><option value="terra">GPT-5.6 Terra</option></select><p class="dialog-tip">新打开页面时优先选择此模型，不改变当前 Provider 调用流程。</p></div>
+          <div class="settings-group"><label class="field-label" for="default-model-setting">默认模型</label><select id="default-model-setting" class="settings-select"><option value="deepseek">DeepSeek V4 Flash</option><option value="terra">GPT-5.6 Terra</option></select><p class="dialog-tip">新打开页面时优先选择此模型，不改变当前 Provider 调用流程。</p></div>
           <div class="settings-group"><h4>Auto 模式</h4><button type="button" class="reserved-feature" data-reserved-feature="Auto Router 将在 Phase 5 开放" disabled><span>Auto 自动选择模型</span><span class="phase-badge">Phase 5</span></button><p class="dialog-tip">这里只保留产品入口，本阶段不会自动路由模型。</p></div>
           <div class="settings-group"><h4>推理偏好</h4><div id="reasoning-preference-options" class="choice-row" role="group" aria-label="推理偏好"><button type="button" class="choice-button" data-reasoning-preference="fast">响应优先</button><button type="button" class="choice-button" data-reasoning-preference="balanced">均衡</button><button type="button" class="choice-button" data-reasoning-preference="deep">深度优先</button></div><p class="dialog-tip">偏好会保存供未来智能模式使用；当前 Terra 档位仍由顶部控件明确选择。</p></div>
         </section>

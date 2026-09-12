@@ -30,7 +30,7 @@ class PersonalizationSettingsUpdate(BaseModel):
 
     theme_mode: str = Field(pattern="^(light|dark)$")
     color_scheme: str = Field(pattern="^(green|blue|purple)$")
-    assistant_avatar: str | None = Field(default=None, pattern="^(default|mario|pikachu|stitch|compass|cloud|moon|spark)$")
+    assistant_avatar: str | None = Field(default=None, max_length=400000)
     user_avatar: str | None = Field(default=None, max_length=400000)
     font_scale: str | None = Field(default=None, pattern="^(small|standard|large|xlarge)$")
     default_model: str | None = Field(default=None, pattern="^(deepseek|terra)$")
@@ -41,10 +41,11 @@ class PersonalizationSettingsUpdate(BaseModel):
     animations_enabled: bool | None = None
     ui_language: str | None = Field(default=None, pattern="^(zh-CN|en)$")
 
-    @field_validator("user_avatar")
+    @field_validator("assistant_avatar", "user_avatar")
     @classmethod
-    def validate_user_avatar(cls, value: str | None) -> str | None:
-        if value in (None, "default"):
+    def validate_avatar(cls, value: str | None) -> str | None:
+        preset_avatars = {"default", "mario", "pikachu", "stitch", "compass", "cloud", "moon", "spark"}
+        if value in (None, *preset_avatars):
             return value
         allowed_prefixes = ("data:image/png;base64,", "data:image/jpeg;base64,", "data:image/webp;base64,")
         prefix = next((item for item in allowed_prefixes if value.startswith(item)), None)

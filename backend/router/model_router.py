@@ -17,7 +17,7 @@ class ModelRouter:
                 raise ProviderError(status.message)
             return self.terra, "GPT-5.6 Terra"
         # Auto is intentionally simple and visible: v0.1 always chooses DeepSeek.
-        return self.deepseek, "DeepSeek"
+        return self.deepseek, "DeepSeek V4 Flash"
 
     async def status(self) -> dict:
         deepseek = await self.deepseek.health_check()

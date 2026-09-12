@@ -23,7 +23,7 @@ class DeepSeekProvider(ModelProvider):
     async def list_models(self) -> list[dict[str, str | bool]]:
         return [{
             "id": settings.deepseek_model_id,
-            "display_name": "DeepSeek",
+            "display_name": "DeepSeek V4 Flash",
             "available": self._configured(),
         }]
 

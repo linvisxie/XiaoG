@@ -1,13 +1,13 @@
 {
   "name": "XiaoG",
-  "version": "0.3.6",
-  "phase": "Phase 4.5-B3 Pre-Phase-5 Final Refinement",
-  "models": ["DeepSeek", "GPT-5.6 Terra"],
+  "version": "0.3.7",
+  "phase": "Phase 4.5-B3 Pre-Phase-5 Final Consistency Patch",
+  "models": ["DeepSeek V4 Flash", "GPT-5.6 Terra"],
   "capabilities": [
     "对话与流式输出",
     "本机 SQLite 历史、置顶、归档与回收站",
     "全局会话搜索（标题、用户消息、AI消息与定位）",
-    "DeepSeek 与 GPT-5.6 Terra 手动切换",
+    "DeepSeek V4 Flash 与 GPT-5.6 Terra 手动切换",
     "Terra 长期 Codex App Server 与同会话 thread 复用",
     "主题、配色、头像与显示设置",
     "简体中文与 English 软件界面切换",
@@ -23,6 +23,7 @@
     "附件、语音和富媒体卡片目前仅提供界面入口或预留结构"
   ],
   "changelog": [
+    {"version": "0.3.7", "title": "UI and model identity consistency", "items": ["移除用户消息上方的“你”标签", "设置、侧栏与 AI 消息统一使用 assistant_avatar", "DeepSeek 以 DeepSeek V4 Flash 显示，保留真实 model_id"]},
     {"version": "0.3.6", "title": "Pre-Phase-5 refinement baseline", "items": ["产品状态在聊天中可基于实时项目资料回答", "统一界面对齐与中英文界面切换", "Persona 与用户资料归入个性化设置"]},
     {"version": "0.3.5", "title": "Global Search v1 completion", "items": ["统一 Search Service 入口", "会话标题、用户消息与 AI 消息搜索", "搜索结果可直接定位匹配消息"]},
     {"version": "0.3.3", "title": "Phase 4.5-B3 product experience baseline", "items": ["统一设置、显示偏好与通知反馈", "新聊天欢迎页与头像体验优化", "安全链接渲染与图片、视频、文件卡片结构（UI 预留）"]},
