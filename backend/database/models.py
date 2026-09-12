@@ -33,7 +33,7 @@ class PersonalizationSettingsUpdate(BaseModel):
     assistant_avatar: str | None = Field(default=None, max_length=400000)
     user_avatar: str | None = Field(default=None, max_length=400000)
     font_scale: str | None = Field(default=None, pattern="^(small|standard|large|xlarge)$")
-    default_model: str | None = Field(default=None, pattern="^(deepseek|terra)$")
+    default_model: str | None = Field(default=None, pattern="^(auto|deepseek|terra)$")
     reasoning_preference: str | None = Field(default=None, pattern="^(fast|balanced|deep)$")
     chat_density: str | None = Field(default=None, pattern="^(comfortable|compact)$")
     manual_reasoning_preferences: dict[str, str] | None = None

@@ -302,7 +302,7 @@ function normalizePersonalization(value = {}) {
     assistant_avatar: isCustomAvatar(value.assistant_avatar) || ["default", "mario", "pikachu", "stitch", "compass", "cloud", "moon", "spark"].includes(value.assistant_avatar) ? value.assistant_avatar : "default",
     user_avatar: value.user_avatar?.startsWith("data:image/") ? value.user_avatar : "default",
     font_scale: ["small", "standard", "large", "xlarge"].includes(value.font_scale) ? value.font_scale : "standard",
-    default_model: ["deepseek", "terra"].includes(value.default_model) ? value.default_model : "deepseek",
+    default_model: ["auto", "deepseek", "terra"].includes(value.default_model) ? value.default_model : "deepseek",
     reasoning_preference: ["fast", "balanced", "deep"].includes(value.reasoning_preference) ? value.reasoning_preference : "balanced",
     manual_reasoning_preferences: Object.fromEntries(Object.entries(value.manual_reasoning_preferences || {}).filter(([modelId, effort]) => typeof modelId === "string" && typeof effort === "string" && modelId && effort)),
     chat_density: value.chat_density === "compact" ? "compact" : "comfortable",

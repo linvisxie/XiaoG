@@ -8,7 +8,7 @@ Autopilot State: RUNNING
 Window Start: 2026-09-12 Asia/Shanghai
 Window Stop Gate: Engineering Foundation candidate accepted by the Product Owner
 Current Stage: Phase 5 / v0.4.2 - Auto Router v1
-Current Task: v0.4.1 Candidate was accepted by the Product Owner; v0.4.2 is the next authorized stage.
+Current Task: v0.4.2 Auto Router v1 implementation is in progress; local rules checkpoint is ready for service smoke verification.
 Current Branch: main
 Start Accepted Baseline: v0.4.0 / 7ddab006a618ede56e3d22d55ba2f212d8f47cd0
 Last Accepted Stable Baseline: v0.4.1 / b0632f273ddb5310fe59e580bfb06bad067e7026

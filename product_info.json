@@ -1,7 +1,7 @@
 {
   "name": "XiaoG",
-  "version": "0.4.1",
-  "phase": "Phase 5 - Dynamic Manual Reasoning",
+  "version": "0.4.2",
+  "phase": "Phase 5 - Auto Router v1",
   "models": ["DeepSeek V4 Flash", "GPT-5.6 Terra"],
   "capabilities": [
     "对话与流式输出",
@@ -10,6 +10,7 @@
     "DeepSeek 与 GPT-5.6 Terra 的 Provider / Model / Capability Registry",
     "DeepSeek V4 Flash 与 GPT-5.6 Terra 的手动模型与推理档位选择",
     "根据 Model Registry 动态生成的 Manual Reasoning 选择器与按模型保存的推理偏好",
+    "Auto Router v1：本地规则按任务信号、上下文、模型能力与实时可用状态选择模型和推理档位",
     "Terra 长期 Codex App Server 与同会话 thread 复用",
     "主题、配色、头像与显示设置",
     "简体中文与 English 软件界面切换",
@@ -18,13 +19,14 @@
     "基础通知与富内容卡片 UI 结构"
   ],
   "limitations": [
-    "尚未实现 Auto Router",
+    "Auto Router v1 仅基于本地规则；复杂度判断不调用额外 LLM",
     "尚未实现长期 Memory、Knowledge Base 或 Projects",
     "尚未实现 Plugins、Skills、Tasks、Agent 或 Remote Control",
     "尚未实现真正联网 Web Search",
     "附件、语音和富媒体卡片目前仅提供界面入口或预留结构"
   ],
   "changelog": [
+    {"version": "0.4.2", "title": "Auto Router v1", "items": ["Auto 使用本地透明规则选择 Provider、Model 与 Reasoning Effort", "路由参考任务复杂度、文本和上下文长度、代码/结构化/推理信号与实时可用状态", "Manual Model + Reasoning 选择始终严格优先；SSE 返回非 CoT 路由元数据"]},
     {"version": "0.4.1", "title": "Dynamic manual reasoning", "items": ["推理档位选择器由 Model Registry 的真实能力动态生成", "DeepSeek V4 Flash 支持 None、Low、High、Max；GPT-5.6 Terra 支持 Low、Medium、High、Extra High、Max、Ultra", "每个模型分别保存最近一次手动推理选择；Auto Router 仍未实现"]},
     {"version": "0.4.0", "title": "Provider and model capability registry", "items": ["建立统一 Provider Registry、Model Registry 与 Capability System", "模型显示名和实时可用状态由 Registry 提供", "记录 DeepSeek V4 Flash 与 GPT-5.6 Terra 的真实推理能力元数据，不改变现有 Provider 调用行为"]},
     {"version": "0.3.7.2", "title": "Stabilize header model controls", "items": ["模型标签、选择器、状态、Auto 与 Terra 推理区域使用独立稳定轨道", "切换模型不再改变模型标签或选择器的横向位置"]},

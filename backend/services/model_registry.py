@@ -77,8 +77,8 @@ class ModelRegistry:
                 "models": models_by_key[selection_key],
                 "details": self._safe_details(status.details),
             }
-        # Auto remains an unimplemented product entry in v0.4.1.
-        result["auto"] = {"available": False, "message": "Auto Router 尚未实现。"}
+        available = [model for model in registry["models"] if model["availability"]]
+        result["auto"] = {"available": bool(available), "message": "本地规则会在可用模型间自动选择。" if available else "没有可用模型可供自动选择。"}
         result["registry"] = registry
         return result
 

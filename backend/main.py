@@ -208,9 +208,14 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
         raise HTTPException(status_code=422, detail="消息不能为空。")
 
     try:
-        provider, display_name, selected_effort, model_metadata = await model_router.select_manual(
-            payload.model_preference, payload.reasoning_effort
-        )
+        context_characters = sum(len(str(message.get("content") or "")) for message in conversation_service.list_messages(conversation_id))
+        if payload.model_preference == "auto":
+            provider, display_name, selected_effort, model_metadata, routing = await model_router.select_auto(content, context_characters)
+        else:
+            provider, display_name, selected_effort, model_metadata = await model_router.select_manual(
+                payload.model_preference, payload.reasoning_effort
+            )
+            routing = None
     except ReasoningEffortError as exc:
         raise HTTPException(status_code=422, detail={"code": "unsupported_reasoning_effort", "message": str(exc)}) from exc
     except ProviderError as exc:
@@ -230,7 +235,7 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
             profile = memory_service.get_user_profile()
             memories = memory_service.get_relevant_memories(content)
             model_messages = conversation_service.build_model_messages(conversation_id, system_prompt, profile, memories)
-            yield event_stream("meta", {"provider": provider.name, "provider_id": model_metadata["provider_id"], "model": actual_model, "model_id": actual_model, "display_name": display_name, "reasoning_effort": selected_effort})
+            yield event_stream("meta", {"provider": provider.name, "provider_id": model_metadata["provider_id"], "model": actual_model, "model_id": actual_model, "display_name": display_name, "reasoning_effort": selected_effort, "routing": routing})
             stream = (
                 provider.stream_chat(
                     model_messages,
