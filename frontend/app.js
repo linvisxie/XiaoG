@@ -3,7 +3,7 @@ const state = {
   abortController: null, generating: false, autoScroll: true, terraEfforts: [],
   terraEffort: localStorage.getItem("xiaog.terraReasoningEffort") || "medium",
   sidebarCollapsed: localStorage.getItem("xiaog.sidebarCollapsed") === "true",
-  scrollPositions: new Map(), conversations: [], currentMessages: [], currentTitle: "新聊天", providerStatus: null,
+  scrollPositions: new Map(), conversations: [], currentMessages: [], currentTitle: "新聊天", providerStatus: null, modelRegistry: null,
   personalization: {
     theme_mode: "light", color_scheme: "green", assistant_avatar: "default", user_avatar: "default", font_scale: "standard",
     default_model: "deepseek", reasoning_preference: "balanced", chat_density: "comfortable",
@@ -21,10 +21,11 @@ async function request(url, options = {}) {
 }
 function modelLabel(model) {
   const normalized = (model || "").toLowerCase();
-  if (normalized === "gpt-5.6-terra") return "GPT-5.6 Terra";
-  if (normalized.startsWith("deepseek")) return "DeepSeek V4 Flash";
-  return model || "DeepSeek V4 Flash";
+  const registered = state.modelRegistry?.models?.find((entry) => (entry.model_id || "").toLowerCase() === normalized);
+  return registered?.display_name || model || "…";
 }
+function selectionModel(key) { return state.providerStatus?.[key]?.models?.[0] || state.modelRegistry?.models?.find((entry) => entry.selection_key === key) || null; }
+function selectionModelLabel(key) { return selectionModel(key)?.display_name || modelSelect.querySelector(`option[value="${key}"]`)?.textContent?.trim() || "…"; }
 function notify(message, type = "system") { const service = window.XiaoGNotification, localized = window.XiaoGI18n?.t(message) || message; if (service?.[type]) return service[type](localized); return service?.system(localized); }
 function showToast(message, type = "system") { return notify(message, type); }
 function safeHttpUrl(value) { try { const url = new URL(value, window.location.href); return ["http:", "https:"].includes(url.protocol) ? url.href : null; } catch { return null; } }
@@ -231,8 +232,8 @@ function renderTerraEfforts(details = {}) {
   syncTerraControl();
 }
 function syncTerraControl() { $("#terra-effort-control").classList.toggle("reserved", modelSelect.value !== "terra" || !state.terraEfforts.length); }
-function syncModelStatus(forcedState) { const key = modelSelect.value, label = key === "terra" ? "GPT-5.6 Terra" : "DeepSeek V4 Flash", available = state.providerStatus?.[key]?.available !== false, status = forcedState || (available ? "available" : "error"), element = $("#model-status"); element.className = `model-status ${status}`; $("#model-status-label").textContent = label; }
-async function loadProviderStatus() { try { const status = await request("/api/provider-status"); state.providerStatus = status; const deepseekName = status.deepseek?.models?.[0]?.display_name || "DeepSeek V4 Flash", deepseek = modelSelect.querySelector('option[value="deepseek"]'), defaultDeepseek = $("#default-model-setting")?.querySelector('option[value="deepseek"]'), terra = modelSelect.querySelector('option[value="terra"]'), defaultTerra = $("#default-model-setting")?.querySelector('option[value="terra"]'); if (deepseek) deepseek.textContent = deepseekName; if (defaultDeepseek) defaultDeepseek.textContent = deepseekName; terra.disabled = !status.terra.available; if (defaultTerra) defaultTerra.disabled = !status.terra.available; terra.textContent = status.terra.available ? "GPT-5.6 Terra" : "当前账户未提供 GPT-5.6 Terra"; if (!status.terra.available && modelSelect.value === "terra") modelSelect.value = "deepseek"; $("#provider-note").textContent = status.terra.available ? "Terra 可用；可在右侧切换模型。" : status.terra.message; renderTerraEfforts(status.terra.details || {}); syncModelStatus(); } catch { $("#provider-note").textContent = "无法读取模型状态。"; syncModelStatus("error"); notify("模型连接状态读取失败", "error"); } }
+function syncModelStatus(forcedState) { const key = modelSelect.value, label = selectionModelLabel(key), available = state.providerStatus?.[key]?.available !== false, status = forcedState || (available ? "available" : "error"), element = $("#model-status"); element.className = `model-status ${status}`; $("#model-status-label").textContent = label; }
+async function loadProviderStatus() { try { const status = await request("/api/provider-status"); state.providerStatus = status; state.modelRegistry = status.registry || null; const deepseekModel = selectionModel("deepseek"), terraModel = selectionModel("terra"), deepseek = modelSelect.querySelector('option[value="deepseek"]'), defaultDeepseek = $("#default-model-setting")?.querySelector('option[value="deepseek"]'), terra = modelSelect.querySelector('option[value="terra"]'), defaultTerra = $("#default-model-setting")?.querySelector('option[value="terra"]'); if (deepseek) deepseek.textContent = deepseekModel?.display_name || "…"; if (defaultDeepseek) defaultDeepseek.textContent = deepseekModel?.display_name || "…"; if (terra) terra.textContent = terraModel?.display_name || "…"; if (defaultTerra) defaultTerra.textContent = terraModel?.display_name || "…"; terra.disabled = !status.terra.available; if (defaultTerra) defaultTerra.disabled = !status.terra.available; if (!status.terra.available && modelSelect.value === "terra") modelSelect.value = "deepseek"; $("#provider-note").textContent = status.terra.available ? "Terra 可用；可在右侧切换模型。" : status.terra.message; renderTerraEfforts(status.terra.details || {}); syncModelStatus(); } catch { $("#provider-note").textContent = "无法读取模型状态。"; syncModelStatus("error"); notify("模型连接状态读取失败", "error"); } }
 async function sendMessage(content) {
   if (!content.trim() || state.generating || conversationRestricted()) return;
   if (!state.conversationId) { const conversation = await request("/api/conversations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }); state.conversationId = conversation.id; state.currentTitle = conversation.title; await refreshConversations(); }

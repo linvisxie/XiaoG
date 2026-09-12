@@ -83,6 +83,12 @@ async def provider_status() -> dict:
     return await model_router.status()
 
 
+@app.get("/api/model-registry")
+async def get_model_registry() -> dict:
+    """Expose credential-free product model metadata for future XiaoG features."""
+    return await model_router.registry.snapshot()
+
+
 @app.get("/api/conversations")
 async def list_conversations(archived: bool = False, deleted: bool = False) -> list[dict]:
     return conversation_service.list_conversations(archived=archived, deleted=deleted)
