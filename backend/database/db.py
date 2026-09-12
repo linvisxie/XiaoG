@@ -101,6 +101,12 @@ def initialize_database() -> None:
             conn.execute("ALTER TABLE conversations ADD COLUMN deleted_at TEXT")
         if "deleted_from" not in conversation_columns:
             conn.execute("ALTER TABLE conversations ADD COLUMN deleted_from TEXT")
+        if "model_mode" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN model_mode TEXT NOT NULL DEFAULT 'auto'" )
+        if "manual_model" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN manual_model TEXT NOT NULL DEFAULT 'deepseek'" )
+        if "manual_reasoning_effort" not in conversation_columns:
+            conn.execute("ALTER TABLE conversations ADD COLUMN manual_reasoning_effort TEXT" )
         conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_archived_updated ON conversations(archived_at, updated_at DESC)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_state ON conversations(deleted_at, archived_at, is_pinned DESC, pinned_at DESC, updated_at DESC)")
         conn.execute(

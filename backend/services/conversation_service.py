@@ -9,7 +9,8 @@ from backend.services.product_info_service import product_info_service
 
 CONVERSATION_COLUMNS = (
     "id, title, created_at, updated_at, archived_at, codex_thread_id, "
-    "codex_last_synced_message_id, is_pinned, pinned_at, deleted_at, deleted_from"
+    "codex_last_synced_message_id, is_pinned, pinned_at, deleted_at, deleted_from, "
+    "model_mode, manual_model, manual_reasoning_effort"
 )
 
 
@@ -17,29 +18,32 @@ class ConversationService:
     def create_conversation(self, title: str | None = None) -> dict:
         conversation_id = str(uuid4())
         timestamp = now_iso()
+        default_model = self.get_setting("default_model") or "deepseek"
+        preferences = self.get_manual_reasoning_preferences()
+        manual_model = default_model if default_model in {"deepseek", "terra"} else "deepseek"
         record = {
-            "id": conversation_id,
-            "title": (title or "新对话").strip()[:120] or "新对话",
-            "created_at": timestamp,
-            "updated_at": timestamp,
-            "archived_at": None,
-            "codex_thread_id": None,
-            "codex_last_synced_message_id": None,
-            "is_pinned": 0,
-            "pinned_at": None,
-            "deleted_at": None,
-            "deleted_from": None,
+            "id": conversation_id, "title": (title or "新对话").strip()[:120] or "新对话",
+            "created_at": timestamp, "updated_at": timestamp, "archived_at": None,
+            "codex_thread_id": None, "codex_last_synced_message_id": None,
+            "is_pinned": 0, "pinned_at": None, "deleted_at": None, "deleted_from": None,
+            "model_mode": "auto" if default_model == "auto" else "manual",
+            "manual_model": manual_model, "manual_reasoning_effort": preferences.get(manual_model),
         }
         with get_connection() as conn:
             conn.execute(
                 "INSERT INTO conversations(id, title, created_at, updated_at, archived_at, codex_thread_id, "
-                "codex_last_synced_message_id, is_pinned, pinned_at, deleted_at, deleted_from) "
+                "codex_last_synced_message_id, is_pinned, pinned_at, deleted_at, deleted_from, model_mode, manual_model, manual_reasoning_effort) "
                 "VALUES (:id, :title, :created_at, :updated_at, :archived_at, :codex_thread_id, "
-                ":codex_last_synced_message_id, :is_pinned, :pinned_at, :deleted_at, :deleted_from)",
-                record,
-            )
+                ":codex_last_synced_message_id, :is_pinned, :pinned_at, :deleted_at, :deleted_from, :model_mode, :manual_model, :manual_reasoning_effort)", record)
         return record
 
+    def update_model_settings(self, conversation_id: str, model_mode: str, manual_model: str, manual_reasoning_effort: str | None) -> dict | None:
+        with get_connection() as conn:
+            result = conn.execute(
+                "UPDATE conversations SET model_mode = ?, manual_model = ?, manual_reasoning_effort = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+                (model_mode, manual_model, manual_reasoning_effort, now_iso(), conversation_id),
+            )
+        return self.get_conversation(conversation_id) if result.rowcount else None
     def list_conversations(self, archived: bool = False, deleted: bool = False) -> list[dict]:
         if deleted:
             where = "deleted_at IS NOT NULL"

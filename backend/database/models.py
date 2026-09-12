@@ -20,6 +20,12 @@ class ChatRequest(BaseModel):
     reasoning_effort: str | None = Field(default=None, max_length=32)
 
 
+class ConversationModelSettingsUpdate(BaseModel):
+    model_mode: str = Field(pattern="^(auto|manual)$")
+    manual_model: str = Field(pattern="^(deepseek|terra)$")
+    manual_reasoning_effort: str | None = Field(default=None, max_length=32)
+
+
 class SettingsUpdate(BaseModel):
     system_prompt: str = Field(min_length=1, max_length=12000)
     user_profile: str = Field(default="", max_length=12000)

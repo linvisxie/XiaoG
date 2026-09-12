@@ -13,7 +13,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.config import settings
 from backend.database.db import initialize_database
-from backend.database.models import ChatRequest, ConversationCreate, ConversationTitleUpdate, SettingsUpdate
+from backend.database.models import ChatRequest, ConversationCreate, ConversationTitleUpdate, SettingsUpdate, ConversationModelSettingsUpdate
 from backend.database.models import PersonalizationSettingsUpdate
 from backend.pricing import estimate_deepseek_cost
 from backend.providers.base import ProviderError, ReasoningEffortError
@@ -121,6 +121,12 @@ async def get_conversation(conversation_id: str) -> dict:
         raise HTTPException(status_code=404, detail="找不到该会话。")
     return {**conversation, "messages": conversation_service.list_messages(conversation_id)}
 
+@app.put("/api/conversations/{conversation_id}/model-settings")
+async def update_conversation_model_settings(conversation_id: str, payload: ConversationModelSettingsUpdate) -> dict:
+    conversation = conversation_service.update_model_settings(conversation_id, payload.model_mode, payload.manual_model, payload.manual_reasoning_effort)
+    if not conversation:
+        raise HTTPException(status_code=404, detail="找不到可更新的会话。")
+    return conversation
 
 @app.delete("/api/conversations/{conversation_id}", status_code=204)
 async def delete_conversation(conversation_id: str) -> None:
@@ -209,11 +215,11 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
 
     try:
         context_characters = sum(len(str(message.get("content") or "")) for message in conversation_service.list_messages(conversation_id))
-        if payload.model_preference == "auto":
+        if conversation.get("model_mode") == "auto":
             provider, display_name, selected_effort, model_metadata, routing = await model_router.select_auto(content, context_characters)
         else:
             provider, display_name, selected_effort, model_metadata = await model_router.select_manual(
-                payload.model_preference, payload.reasoning_effort
+                conversation.get("manual_model") or "deepseek", conversation.get("manual_reasoning_effort")
             )
             routing = None
     except ReasoningEffortError as exc:
