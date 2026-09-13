@@ -17,9 +17,9 @@ Current Task: WP-2 local release contract and deterministic smoke are complete. 
 Current Branch: main
 Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Engineering Foundation product baseline / ffdfe3de10c87e50afc3d69017b1deaf7e883029
 Last Accepted Stable Baseline: Engineering Foundation / ffdfe3de10c87e50afc3d69017b1deaf7e883029
-Current Candidate: pending WP-2 local candidate commit
+Current Candidate: WP-2 local candidate / da5bb6c27ab3c33b7275eac8e686b16c53e057ad
 Last Checkpoint: 12a3ed352b0af3db1f611babcb1d295fd0982114 (WP-1 candidate)
-Working Tree: WP-2 local changes pending candidate/handoff commits; no external state was changed.
+Working Tree: clean after the final local WP-2 status commit; no external state was changed.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
 Tests Completed: WP-2 release smoke passed with ASGI/fake-local dependencies; core regression 37/37 passed; Python compilation, frontend syntax, and diff whitespace check passed. No real Provider/API, deployment, tunnel, public listener, external account, GitHub, remote, or cloud action occurred.
 Tests Pending: Tech Lead review and a future authorized WP-3 invited-access/cost-abuse boundary; no external deployment is authorized in WP-2.
