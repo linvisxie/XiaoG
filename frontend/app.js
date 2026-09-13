@@ -209,9 +209,9 @@ function locateMessage(messageId) {
   messagesEl.scrollTo({ top: Math.max(0, top), behavior: "auto" }); state.autoScroll = false; syncScrollControls(); target.focus({ preventScroll: true }); target.classList.add("search-target"); window.setTimeout(() => target.classList.remove("search-target"), 1800);
 }
 async function refreshConversations() { const query = state.view === "archived" ? "archived=true" : state.view === "trash" ? "deleted=true" : ""; state.conversations = await request(`/api/conversations${query ? `?${query}` : ""}`); renderConversationList(); }
-async function startDraft() { if (state.generating) return; const requestId = ++state.navigationRequestId; rememberScrollPosition(); clearGlobalSearch(); state.view = "active"; const defaults = await request("/api/conversations/default-model-settings"); if (requestId !== state.navigationRequestId) return; state.conversationId = null; state.conversationModelSettings = defaults; modelSelect.value = defaults.model_mode === "auto" ? "auto" : defaults.manual_model; state.conversationArchived = false; state.conversationDeleted = false; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle("新聊天"); renderManualReasoning(); syncModelStatus(); setComposerRestricted(); await refreshConversations(); inputEl.focus(); }
+async function startDraft() { if (state.generating) return; const requestId = ++state.navigationRequestId; rememberScrollPosition(); clearGlobalSearch(); state.view = "active"; const defaults = await request("/api/conversations/default-model-settings"); if (requestId !== state.navigationRequestId) return; state.conversationId = null; state.conversationModelSettings = normalizeConversationModelSettings(defaults); modelSelect.value = state.conversationModelSettings.model_mode === "auto" ? "auto" : state.conversationModelSettings.manual_model; state.conversationArchived = false; state.conversationDeleted = false; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle("新聊天"); renderManualReasoning(); syncModelStatus(); setComposerRestricted(); await refreshConversations(); inputEl.focus(); }
 
-async function openConversation(id, targetMessageId = null) { if (state.generating) return; const requestId = ++state.navigationRequestId; rememberScrollPosition(); const conversation = await request(`/api/conversations/${id}`); if (requestId !== state.navigationRequestId) return; state.conversationId = id; state.conversationArchived = Boolean(conversation.archived_at); state.conversationDeleted = Boolean(conversation.deleted_at); state.conversationModelSettings = { model_mode: conversation.model_mode || "auto", manual_model: conversation.manual_model || "deepseek", manual_reasoning_effort: conversation.manual_reasoning_effort || null }; modelSelect.value = state.conversationModelSettings.model_mode === "auto" ? "auto" : state.conversationModelSettings.manual_model; renderManualReasoning(); renderMessages(conversation.messages); setHeaderTitle(conversation.title); setComposerRestricted(); await refreshConversations(); if (targetMessageId) locateMessage(targetMessageId); else restoreScrollPosition(id); }
+async function openConversation(id, targetMessageId = null) { if (state.generating) return; const requestId = ++state.navigationRequestId; rememberScrollPosition(); const conversation = await request(`/api/conversations/${id}`); if (requestId !== state.navigationRequestId) return; state.conversationId = id; state.conversationArchived = Boolean(conversation.archived_at); state.conversationDeleted = Boolean(conversation.deleted_at); state.conversationModelSettings = normalizeConversationModelSettings(conversation); modelSelect.value = state.conversationModelSettings.model_mode === "auto" ? "auto" : state.conversationModelSettings.manual_model; renderManualReasoning(); renderMessages(conversation.messages); setHeaderTitle(conversation.title); setComposerRestricted(); await refreshConversations(); if (targetMessageId) locateMessage(targetMessageId); else restoreScrollPosition(id); }
 function showView(view) { if (state.generating) return; clearGlobalSearch(); return showConversationView(view); }
 async function showConversationView(view) { ++state.navigationRequestId; rememberScrollPosition(); state.view = view; state.conversationId = null; state.conversationModelSettings = null; state.conversationArchived = view === "archived"; state.conversationDeleted = view === "trash"; state.currentMessages = []; state.autoScroll = true; emptyMessages(); setHeaderTitle(view === "archived" ? "已归档会话" : view === "trash" ? "回收站" : "新聊天"); setComposerRestricted(); await refreshConversations(); }
 async function setPinned(conversation, pinned) { await request(`/api/conversations/${conversation.id}/${pinned ? "pin" : "unpin"}`, { method: "POST" }); notify(pinned ? "会话已置顶" : "已取消置顶", "success"); await refreshConversations(); }
@@ -237,21 +237,26 @@ function defaultReasoningEffort(model) {
   const preferences = state.personalization.manual_reasoning_preferences || {};
   return resolveReasoningEffort(model, preferences[model?.selection_key] ?? preferences[model?.model_id]);
 }
+function normalizeConversationModelSettings(value) {
+  const modelMode = value?.model_mode === "manual" ? "manual" : "auto";
+  const manualModel = value?.manual_model === "terra" ? "terra" : "deepseek";
+  const preferences = Object.fromEntries(Object.entries(value?.manual_reasoning_preferences || {}).filter(([model, effort]) => typeof model === "string" && typeof effort === "string" && model && effort));
+  const legacyEffort = typeof value?.manual_reasoning_effort === "string" ? value.manual_reasoning_effort : null;
+  // Legacy rows had one scalar. It belongs only to their selected model.
+  if (modelMode === "manual" && legacyEffort && !preferences[manualModel]) preferences[manualModel] = legacyEffort;
+  return { model_mode: modelMode, manual_model: manualModel, manual_reasoning_effort: modelMode === "manual" ? preferences[manualModel] || legacyEffort : null, manual_reasoning_preferences: preferences };
+}
 function currentReasoningEffort(model) {
-  const saved = state.conversationModelSettings?.manual_model === model?.selection_key ? state.conversationModelSettings.manual_reasoning_effort : null;
-  return resolveReasoningEffort(model, saved);
-}
-function systemDefaultModelSettings() {
+  const settings = state.conversationModelSettings;
+  const saved = settings?.manual_reasoning_preferences?.[model?.selection_key]
+    ?? (settings?.model_mode === "manual" && settings.manual_model === model?.selection_key ? settings.manual_reasoning_effort : null);
+  return resolveReasoningEffort(model, saved ?? defaultReasoningEffort(model));
+}function systemDefaultModelSettings() {
   const defaultModel = state.personalization.default_model;
-  if (defaultModel === "auto") return { model_mode: "auto", manual_model: "deepseek", manual_reasoning_effort: null };
-  const model = selectionModel(defaultModel);
-  return {
-    model_mode: "manual",
-    manual_model: defaultModel,
-    manual_reasoning_effort: defaultReasoningEffort(model),
-  };
-}
-function renderReasoningTarget(target, className, options, selected, onSelect) {
+  if (defaultModel === "auto") return { model_mode: "auto", manual_model: "deepseek", manual_reasoning_effort: null, manual_reasoning_preferences: {} };
+  const model = selectionModel(defaultModel), effort = defaultReasoningEffort(model);
+  return { model_mode: "manual", manual_model: defaultModel, manual_reasoning_effort: effort, manual_reasoning_preferences: effort ? { [defaultModel]: effort } : {} };
+}function renderReasoningTarget(target, className, options, selected, onSelect) {
   if (!target) return;
   target.replaceChildren();
   for (const value of options) {
@@ -292,36 +297,35 @@ function renderManualReasoning() {
 async function saveConversationModelSettings() {
   const conversationId = state.conversationId;
   if (!conversationId || !state.conversationModelSettings) return state.conversationModelSettings;
-  const snapshot = { ...state.conversationModelSettings };
+  const snapshot = { ...state.conversationModelSettings, manual_reasoning_preferences: { ...(state.conversationModelSettings.manual_reasoning_preferences || {}) } };
   const operation = state.modelSettingsSave.promise.catch(() => undefined).then(async () => {
-    const saved = await request("/api/conversations/" + conversationId + "/model-settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(snapshot) });
+    const saved = normalizeConversationModelSettings(await request("/api/conversations/" + conversationId + "/model-settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(snapshot) }));
     if (state.conversationId === conversationId && state.modelSettingsSave.promise === operation) state.conversationModelSettings = saved;
     return saved;
   });
   state.modelSettingsSave = { conversationId, promise: operation };
   return operation;
-}
-async function updateConversationModelSelection(value) {
+}async function updateConversationModelSelection(value) {
   const settings = state.conversationModelSettings;
   if (!settings) return null;
   modelSelect.value = value;
   settings.model_mode = value === "auto" ? "auto" : "manual";
   if (settings.model_mode === "manual") {
     settings.manual_model = value;
-    const model = selectionModel(settings.manual_model);
-    if (!supportedReasoningOptions(model).includes(settings.manual_reasoning_effort)) settings.manual_reasoning_effort = currentReasoningEffort(model);
-  }
+    const model = selectionModel(value), effort = resolveReasoningEffort(model, settings.manual_reasoning_preferences?.[value] ?? defaultReasoningEffort(model));
+    settings.manual_reasoning_preferences = { ...(settings.manual_reasoning_preferences || {}), ...(effort ? { [value]: effort } : {}) };
+    settings.manual_reasoning_effort = effort;
+  } else settings.manual_reasoning_effort = null;
   renderManualReasoning(); syncModelStatus();
   return saveConversationModelSettings();
-}
-function selectManualReasoning(effort) {
+}function selectManualReasoning(effort) {
   const settings = state.conversationModelSettings, model = settings?.model_mode === "manual" ? selectionModel(settings.manual_model) : null, options = supportedReasoningOptions(model);
   if (!settings || !model || !options.includes(effort)) { notify("当前模型不支持所选推理档位", "error"); return; }
+  settings.manual_reasoning_preferences = { ...(settings.manual_reasoning_preferences || {}), [model.selection_key]: effort };
   settings.manual_reasoning_effort = effort;
   renderManualReasoning();
   saveConversationModelSettings().then(() => notify("推理档位已保存", "success")).catch((error) => notify(error.message || "推理档位保存失败", "error"));
-}
-function selectDefaultReasoning(effort) {
+}function selectDefaultReasoning(effort) {
   const defaultModel = state.personalization.default_model, model = defaultModel === "auto" ? null : selectionModel(defaultModel), options = supportedReasoningOptions(model);
   if (!model || !options.includes(effort)) { notify("当前默认模型不支持所选推理档位", "error"); return; }
   const preferences = { ...state.personalization.manual_reasoning_preferences, [model.selection_key]: effort };
@@ -346,7 +350,7 @@ async function sendMessage(content) {
   if (!content.trim() || state.generating || conversationRestricted()) return;
   const pendingModelSave = state.modelSettingsSave;
   if (pendingModelSave.conversationId === state.conversationId) { try { await pendingModelSave.promise; } catch { return; } }
-  if (!state.conversationId) { const draftSettings = { ...state.conversationModelSettings }; const conversation = await request("/api/conversations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }); state.conversationId = conversation.id; state.currentTitle = conversation.title; state.conversationModelSettings = { model_mode: conversation.model_mode || "auto", manual_model: conversation.manual_model || "deepseek", manual_reasoning_effort: conversation.manual_reasoning_effort || null }; if (draftSettings.model_mode) { state.conversationModelSettings = { ...state.conversationModelSettings, ...draftSettings }; await saveConversationModelSettings(); } modelSelect.value = state.conversationModelSettings.model_mode === "auto" ? "auto" : state.conversationModelSettings.manual_model; renderManualReasoning(); await refreshConversations(); }
+  if (!state.conversationId) { const draftSettings = { ...state.conversationModelSettings }; const conversation = await request("/api/conversations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) }); state.conversationId = conversation.id; state.currentTitle = conversation.title; state.conversationModelSettings = normalizeConversationModelSettings(conversation); if (draftSettings.model_mode) { state.conversationModelSettings = { ...state.conversationModelSettings, ...draftSettings }; await saveConversationModelSettings(); } modelSelect.value = state.conversationModelSettings.model_mode === "auto" ? "auto" : state.conversationModelSettings.manual_model; renderManualReasoning(); await refreshConversations(); }
   state.autoScroll = true; syncScrollControls(); const cleanContent = content.trim(), createdAt = new Date().toISOString(); state.currentMessages.push({ role: "user", content: cleanContent, created_at: createdAt }); addMessage({ role: "user", content: cleanContent, created_at: createdAt }, false, true); inputEl.value = ""; resizeInput(); setGenerating(true);
   let actualModel = selectedReasoningModel()?.model_id || modelSelect.value; const assistant = addMessage({ role: "assistant", content: "", model: actualModel }, true, true, cleanContent), rich = assistant.querySelector(".rich-content"), modelBadge = assistant.querySelector(".message-model"); state.abortController = new AbortController(); let received = "", failed = false;
   try {
@@ -392,13 +396,11 @@ function normalizePersonalization(value = {}) {
   };
 }
 function hydrateDraftSystemDefaults() {
-  if (state.conversationId) return;
-  const defaults = systemDefaultModelSettings();
-  state.conversationModelSettings = defaults;
-  modelSelect.value = defaults.model_mode === "auto" ? "auto" : defaults.manual_model;
+  if (state.conversationId || state.conversationModelSettings) return;
+  state.conversationModelSettings = normalizeConversationModelSettings(systemDefaultModelSettings());
+  modelSelect.value = state.conversationModelSettings.model_mode === "auto" ? "auto" : state.conversationModelSettings.manual_model;
   renderManualReasoning(); syncModelStatus();
-}
-function applyPersonalization(value, options = {}) {
+}function applyPersonalization(value, options = {}) {
   state.personalization = normalizePersonalization(value);
   const root = document.documentElement;
   root.dataset.themeMode = state.personalization.theme_mode;

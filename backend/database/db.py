@@ -107,6 +107,9 @@ def initialize_database() -> None:
             conn.execute("ALTER TABLE conversations ADD COLUMN manual_model TEXT NOT NULL DEFAULT 'deepseek'" )
         if "manual_reasoning_effort" not in conversation_columns:
             conn.execute("ALTER TABLE conversations ADD COLUMN manual_reasoning_effort TEXT" )
+        if "manual_reasoning_preferences" not in conversation_columns:
+            # Safe additive migration: keep per-model Manual effort without touching rows.
+            conn.execute("ALTER TABLE conversations ADD COLUMN manual_reasoning_preferences TEXT" )
         conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_archived_updated ON conversations(archived_at, updated_at DESC)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_state ON conversations(deleted_at, archived_at, is_pinned DESC, pinned_at DESC, updated_at DESC)")
         conn.execute(

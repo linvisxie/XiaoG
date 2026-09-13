@@ -24,6 +24,21 @@ class ConversationModelSettingsUpdate(BaseModel):
     model_mode: str = Field(pattern="^(auto|manual)$")
     manual_model: str = Field(pattern="^(deepseek|terra)$")
     manual_reasoning_effort: str | None = Field(default=None, max_length=32)
+    manual_reasoning_preferences: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("manual_reasoning_preferences")
+    @classmethod
+    def validate_conversation_manual_reasoning_preferences(cls, value: dict[str, str]) -> dict[str, str]:
+        if len(value) > 20:
+            raise ValueError("推理档位偏好数量过多。")
+        normalized: dict[str, str] = {}
+        for model_id, effort in value.items():
+            if not isinstance(model_id, str) or not isinstance(effort, str):
+                raise ValueError("推理档位偏好格式无效。")
+            if not model_id or len(model_id) > 120 or not effort or len(effort) > 32:
+                raise ValueError("推理档位偏好内容无效。")
+            normalized[model_id] = effort
+        return normalized
 
 
 class SettingsUpdate(BaseModel):

@@ -9,8 +9,8 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 from backend.database import db as database
-from backend.database.models import ChatRequest
-from backend.main import chat, resolved_default_conversation_model_settings
+from backend.database.models import ChatRequest, ConversationModelSettingsUpdate
+from backend.main import chat, resolved_conversation_model_settings, resolved_default_conversation_model_settings
 from backend.router.model_router import model_router
 from backend.services.conversation_service import ConversationService
 
@@ -55,6 +55,7 @@ class ConversationModelStateTests(unittest.TestCase):
                 "model_mode": "manual",
                 "manual_model": "deepseek",
                 "manual_reasoning_effort": None,
+                "manual_reasoning_preferences": {},
             },
         )
 
@@ -169,6 +170,7 @@ class ConversationModelStateTests(unittest.TestCase):
                 "model_mode": "manual",
                 "manual_model": "terra",
                 "manual_reasoning_effort": "ultra",
+                "manual_reasoning_preferences": {"terra": "ultra"},
             },
         )
 
@@ -229,13 +231,89 @@ class ConversationModelStateTests(unittest.TestCase):
             "deepseek",
         )
 
+    def resolve_and_save(self, conversation_id: str, mode: str, model: str, preferences: dict[str, str], scalar: str | None = None) -> dict:
+        payload = ConversationModelSettingsUpdate(
+            model_mode=mode,
+            manual_model=model,
+            manual_reasoning_effort=scalar,
+            manual_reasoning_preferences=preferences,
+        )
+        with patch.object(model_router, "status", AsyncMock(return_value=self.registry_status())):
+            resolved = asyncio.run(
+                resolved_conversation_model_settings(self.service.get_conversation(conversation_id), payload)
+            )
+        saved = self.service.update_model_settings(conversation_id, **resolved)
+        assert saved is not None
+        return saved
+
+    def test_conversation_manual_reasoning_is_scoped_by_model_and_persists(self) -> None:
+        self.service.update_personalization_settings(
+            {"default_model": "terra", "manual_reasoning_preferences": {"terra": "low", "deepseek": "max"}}
+        )
+        conversation = self.service.create_conversation(
+            model_settings={
+                "model_mode": "manual", "manual_model": "terra", "manual_reasoning_effort": "low",
+                "manual_reasoning_preferences": {"terra": "low"},
+            }
+        )
+        terra_high = self.resolve_and_save(conversation["id"], "manual", "terra", {"terra": "high"}, "high")
+        self.assertEqual(terra_high["manual_reasoning_preferences"], {"terra": "high"})
+
+        # The stale scalar deliberately says high. First DeepSeek use must still be its max default.
+        deepseek_max = self.resolve_and_save(conversation["id"], "manual", "deepseek", {"terra": "high"}, "high")
+        self.assertEqual(deepseek_max["manual_reasoning_effort"], "max")
+        self.assertEqual(deepseek_max["manual_reasoning_preferences"], {"terra": "high", "deepseek": "max"})
+
+        deepseek_low = self.resolve_and_save(conversation["id"], "manual", "deepseek", {"terra": "high", "deepseek": "low"}, "low")
+        terra_restored = self.resolve_and_save(conversation["id"], "manual", "terra", deepseek_low["manual_reasoning_preferences"], "low")
+        deepseek_restored = self.resolve_and_save(conversation["id"], "manual", "deepseek", terra_restored["manual_reasoning_preferences"], "high")
+        self.assertEqual(terra_restored["manual_reasoning_effort"], "high")
+        self.assertEqual(deepseek_restored["manual_reasoning_effort"], "low")
+        self.assertEqual(self.service.get_conversation(conversation["id"])["manual_reasoning_preferences"], {"terra": "high", "deepseek": "low"})
+
+    def test_manual_preferences_are_isolated_across_conversations_and_auto_preserves_them(self) -> None:
+        self.service.update_personalization_settings(
+            {"default_model": "terra", "manual_reasoning_preferences": {"terra": "low", "deepseek": "max"}}
+        )
+        first = self.service.create_conversation(model_settings={"model_mode": "manual", "manual_model": "terra", "manual_reasoning_effort": "low", "manual_reasoning_preferences": {"terra": "low"}})
+        second = self.service.create_conversation(model_settings={"model_mode": "manual", "manual_model": "terra", "manual_reasoning_effort": "low", "manual_reasoning_preferences": {"terra": "low"}})
+        first_high = self.resolve_and_save(first["id"], "manual", "terra", {"terra": "high"}, "high")
+        second_low = self.resolve_and_save(second["id"], "manual", "terra", {"terra": "low"}, "low")
+        self.assertEqual(first_high["manual_reasoning_effort"], "high")
+        self.assertEqual(second_low["manual_reasoning_effort"], "low")
+
+        auto = self.resolve_and_save(first["id"], "auto", "terra", first_high["manual_reasoning_preferences"])
+        deepseek = self.resolve_and_save(first["id"], "manual", "deepseek", auto["manual_reasoning_preferences"], "high")
+        terra = self.resolve_and_save(first["id"], "manual", "terra", deepseek["manual_reasoning_preferences"], "max")
+        self.assertIsNone(auto["manual_reasoning_effort"])
+        self.assertEqual(deepseek["manual_reasoning_effort"], "max")
+        self.assertEqual(terra["manual_reasoning_effort"], "high")
+        self.assertEqual(self.service.get_conversation(second["id"])["manual_reasoning_effort"], "low")
+
+    def test_legacy_scalar_only_row_belongs_only_to_its_current_manual_model(self) -> None:
+        conversation = self.service.create_conversation()
+        # Simulate a pre-migration row: scalar only, no JSON map written.
+        with database.get_connection() as conn:
+            conn.execute(
+                "UPDATE conversations SET model_mode = 'manual', manual_model = 'terra', manual_reasoning_effort = 'high', manual_reasoning_preferences = NULL WHERE id = ?",
+                (conversation["id"],),
+            )
+        legacy = self.service.get_conversation(conversation["id"])
+        self.assertEqual(legacy["manual_reasoning_preferences"], {"terra": "high"})
+        self.service.update_personalization_settings({"manual_reasoning_preferences": {"deepseek": "max", "terra": "low"}})
+        deepseek = self.resolve_and_save(conversation["id"], "manual", "deepseek", legacy["manual_reasoning_preferences"], "high")
+        self.assertEqual(deepseek["manual_reasoning_effort"], "max")
+        self.assertEqual(deepseek["manual_reasoning_preferences"], {"terra": "high", "deepseek": "max"})
     def test_chat_uses_persisted_manual_state_not_conflicting_request_fields(self) -> None:
         conversation = self.service.create_conversation()
+        # The active scalar is DeepSeek/low while Terra retains a distinct high.
+        # chat() must send the selected model's persisted effort, never Terra's.
         self.service.update_model_settings(
             conversation["id"],
             "manual",
             "deepseek",
             "low",
+            {"terra": "high", "deepseek": "low"},
         )
         provider = SimpleNamespace(name="test")
         select_manual = AsyncMock(

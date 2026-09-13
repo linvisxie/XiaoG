@@ -10,7 +10,7 @@ from backend.services.product_info_service import product_info_service
 CONVERSATION_COLUMNS = (
     "id, title, created_at, updated_at, archived_at, codex_thread_id, "
     "codex_last_synced_message_id, is_pinned, pinned_at, deleted_at, deleted_from, "
-    "model_mode, manual_model, manual_reasoning_effort"
+    "model_mode, manual_model, manual_reasoning_effort, manual_reasoning_preferences"
 )
 
 
@@ -22,12 +22,14 @@ class ConversationService:
                 "model_mode": "auto",
                 "manual_model": "deepseek",
                 "manual_reasoning_effort": None,
+                "manual_reasoning_preferences": {},
             }
         manual_model = default_model if default_model in {"deepseek", "terra"} else "deepseek"
         return {
             "model_mode": "manual",
             "manual_model": manual_model,
             "manual_reasoning_effort": self.get_manual_reasoning_preferences().get(manual_model),
+            "manual_reasoning_preferences": {},
         }
 
     def create_conversation(self, title: str | None = None, model_settings: dict | None = None) -> dict:
@@ -44,16 +46,30 @@ class ConversationService:
         with get_connection() as conn:
             conn.execute(
                 "INSERT INTO conversations(id, title, created_at, updated_at, archived_at, codex_thread_id, "
-                "codex_last_synced_message_id, is_pinned, pinned_at, deleted_at, deleted_from, model_mode, manual_model, manual_reasoning_effort) "
+                "codex_last_synced_message_id, is_pinned, pinned_at, deleted_at, deleted_from, model_mode, manual_model, manual_reasoning_effort, manual_reasoning_preferences) "
                 "VALUES (:id, :title, :created_at, :updated_at, :archived_at, :codex_thread_id, "
-                ":codex_last_synced_message_id, :is_pinned, :pinned_at, :deleted_at, :deleted_from, :model_mode, :manual_model, :manual_reasoning_effort)", record)
-        return record
+                ":codex_last_synced_message_id, :is_pinned, :pinned_at, :deleted_at, :deleted_from, :model_mode, :manual_model, :manual_reasoning_effort, :manual_reasoning_preferences)",
+                {**record, "manual_reasoning_preferences": json.dumps(record.get("manual_reasoning_preferences") or {}, ensure_ascii=False, separators=(",", ":"))},
+            )
+        return self._hydrate_model_settings(record)
 
-    def update_model_settings(self, conversation_id: str, model_mode: str, manual_model: str, manual_reasoning_effort: str | None) -> dict | None:
+    def update_model_settings(
+        self, conversation_id: str, model_mode: str, manual_model: str,
+        manual_reasoning_effort: str | None, manual_reasoning_preferences: dict[str, str] | None = None,
+    ) -> dict | None:
+        if manual_reasoning_preferences is None:
+            existing = self.get_conversation(conversation_id) or {}
+            manual_reasoning_preferences = dict(existing.get("manual_reasoning_preferences") or {})
+            if model_mode == "manual" and manual_reasoning_effort:
+                manual_reasoning_preferences[manual_model] = manual_reasoning_effort
         with get_connection() as conn:
             result = conn.execute(
-                "UPDATE conversations SET model_mode = ?, manual_model = ?, manual_reasoning_effort = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
-                (model_mode, manual_model, manual_reasoning_effort, now_iso(), conversation_id),
+                "UPDATE conversations SET model_mode = ?, manual_model = ?, manual_reasoning_effort = ?, manual_reasoning_preferences = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+                (
+                    model_mode, manual_model, manual_reasoning_effort,
+                    json.dumps(manual_reasoning_preferences, ensure_ascii=False, separators=(",", ":")),
+                    now_iso(), conversation_id,
+                ),
             )
         return self.get_conversation(conversation_id) if result.rowcount else None
     def list_conversations(self, archived: bool = False, deleted: bool = False) -> list[dict]:
@@ -68,13 +84,38 @@ class ConversationService:
             order = "is_pinned DESC, CASE WHEN is_pinned = 1 THEN pinned_at END DESC, updated_at DESC"
         with get_connection() as conn:
             rows = conn.execute(f"SELECT {CONVERSATION_COLUMNS} FROM conversations WHERE {where} ORDER BY {order}").fetchall()
-        return [dict(row) for row in rows]
+        return [self._hydrate_model_settings(dict(row)) for row in rows]
 
     def get_conversation(self, conversation_id: str) -> dict | None:
         with get_connection() as conn:
             row = conn.execute(f"SELECT {CONVERSATION_COLUMNS} FROM conversations WHERE id = ?", (conversation_id,)).fetchone()
-        return dict(row) if row else None
+        return self._hydrate_model_settings(dict(row)) if row else None
 
+    @staticmethod
+    def _hydrate_model_settings(conversation: dict) -> dict:
+        """Expose a per-model map while safely interpreting legacy scalar rows."""
+        raw_preferences = conversation.get("manual_reasoning_preferences") or {}
+        if isinstance(raw_preferences, dict):
+            preferences = raw_preferences
+        else:
+            try:
+                preferences = json.loads(raw_preferences)
+            except (TypeError, json.JSONDecodeError):
+                preferences = {}
+        preferences = {
+            model: effort for model, effort in preferences.items()
+            if isinstance(model, str) and isinstance(effort, str) and model and effort
+        } if isinstance(preferences, dict) else {}
+        manual_model = conversation.get("manual_model")
+        legacy_effort = conversation.get("manual_reasoning_effort")
+        # Only the legacy row's current model inherits its scalar. Never copy it
+        # to a different Manual model without an explicit user selection.
+        if manual_model and isinstance(legacy_effort, str) and legacy_effort and manual_model not in preferences:
+            preferences[manual_model] = legacy_effort
+        if conversation.get("model_mode") == "manual" and manual_model in preferences:
+            conversation["manual_reasoning_effort"] = preferences[manual_model]
+        conversation["manual_reasoning_preferences"] = preferences
+        return conversation
     def archive_conversation(self, conversation_id: str) -> bool:
         with get_connection() as conn:
             result = conn.execute(

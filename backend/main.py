@@ -101,38 +101,60 @@ async def search(query: str = Query(default="", max_length=120)) -> dict:
     return {"query": " ".join(query.split()), "results": result["conversations"]}
 
 
+async def _resolve_manual_reasoning_effort(selection_key: str, preferences: dict[str, str]) -> tuple[str | None, dict]:
+    """Resolve one Manual model through live Registry capability and System Defaults."""
+    registry = (await model_router.status()).get("registry") or {}
+    model = next(
+        (item for item in registry.get("models") or [] if item.get("selection_key") == selection_key),
+        None,
+    )
+    if not model:
+        return None, {}
+    options = [effort for effort in model.get("supported_reasoning_efforts") or [] if isinstance(effort, str)]
+    if not options:
+        return None, model
+    system_preferences = conversation_service.get_manual_reasoning_preferences()
+    requested = preferences.get(selection_key)
+    system_default = system_preferences.get(selection_key) or system_preferences.get(model.get("model_id"))
+    registry_default = model.get("default_reasoning_effort")
+    effort = requested if requested in options else system_default if system_default in options else registry_default if registry_default in options else options[0]
+    return effort, model
+
+
 async def resolved_default_conversation_model_settings() -> dict:
     """Resolve persisted System Defaults through the live Registry capability snapshot."""
     defaults = conversation_service.default_model_settings()
     if defaults["model_mode"] == "auto":
         return defaults
+    effort, _model = await _resolve_manual_reasoning_effort(defaults["manual_model"], {})
+    preferences = {defaults["manual_model"]: effort} if effort else {}
+    return {**defaults, "manual_reasoning_effort": effort, "manual_reasoning_preferences": preferences}
 
-    registry = (await model_router.status()).get("registry") or {}
-    model = next(
-        (
-            item
-            for item in registry.get("models") or []
-            if item.get("selection_key") == defaults["manual_model"]
-        ),
-        None,
-    )
-    if not model:
-        return defaults
 
-    options = [
-        effort
-        for effort in model.get("supported_reasoning_efforts") or []
-        if isinstance(effort, str)
-    ]
-    if not options:
-        return {**defaults, "manual_reasoning_effort": None}
-
-    preferences = conversation_service.get_manual_reasoning_preferences()
-    requested = preferences.get(defaults["manual_model"]) or preferences.get(model.get("model_id"))
-    default_effort = model.get("default_reasoning_effort")
-    effort = requested if requested in options else default_effort if default_effort in options else options[0]
-    return {**defaults, "manual_reasoning_effort": effort}
-
+async def resolved_conversation_model_settings(conversation: dict, payload: ConversationModelSettingsUpdate) -> dict:
+    """Merge explicit per-model choices; unseen models always begin at their System Default."""
+    preferences = {
+        **(conversation.get("manual_reasoning_preferences") or {}),
+        **payload.manual_reasoning_preferences,
+    }
+    if payload.model_mode == "auto":
+        return {
+            "model_mode": "auto",
+            "manual_model": payload.manual_model,
+            "manual_reasoning_effort": None,
+            "manual_reasoning_preferences": preferences,
+        }
+    effort, _model = await _resolve_manual_reasoning_effort(payload.manual_model, preferences)
+    if effort:
+        preferences[payload.manual_model] = effort
+    else:
+        preferences.pop(payload.manual_model, None)
+    return {
+        "model_mode": "manual",
+        "manual_model": payload.manual_model,
+        "manual_reasoning_effort": effort,
+        "manual_reasoning_preferences": preferences,
+    }
 
 @app.get("/api/conversations/default-model-settings")
 async def get_default_conversation_model_settings() -> dict:
@@ -164,9 +186,12 @@ async def get_conversation(conversation_id: str) -> dict:
 
 @app.put("/api/conversations/{conversation_id}/model-settings")
 async def update_conversation_model_settings(conversation_id: str, payload: ConversationModelSettingsUpdate) -> dict:
-    conversation = conversation_service.update_model_settings(conversation_id, payload.model_mode, payload.manual_model, payload.manual_reasoning_effort)
-    if not conversation:
+    existing = conversation_service.get_conversation(conversation_id)
+    if not existing:
         raise HTTPException(status_code=404, detail="找不到可更新的会话。")
+    resolved = await resolved_conversation_model_settings(existing, payload)
+    conversation = conversation_service.update_model_settings(conversation_id, **resolved)
+    assert conversation is not None
     return conversation
 
 @app.delete("/api/conversations/{conversation_id}", status_code=204)
