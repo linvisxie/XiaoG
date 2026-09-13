@@ -3,6 +3,8 @@
 Activation: `XIAOG-AUTOPILOT-WEB-PREVIEW-WP3-2026-09-14-V1`  
 State: `HANDOFF_REQUIRED`
 
+WP-3 replacement candidate: `d3210a5e510ce060e4ffe55ca7b53087419467df` (verification patch; replaces `163921c75032da4867cae75935033fd1049e0c3e`).
+
 ## Delivered
 
 - Preview reads per-invite high-entropy credentials only from `XIAOG_PREVIEW_INVITES`; no credential is committed, logged, returned, or stored in session SQLite.

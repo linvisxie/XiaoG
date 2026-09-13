@@ -18,8 +18,8 @@ Current Task: WP-3 local access boundary and deterministic checks are complete. 
 Current Branch: main
 Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Engineering Foundation product baseline / ffdfe3de10c87e50afc3d69017b1deaf7e883029
 Last Accepted Stable Baseline: Engineering Foundation / ffdfe3de10c87e50afc3d69017b1deaf7e883029
-Current Candidate: WP-3 local candidate / 163921c75032da4867cae75935033fd1049e0c3e
-Last Checkpoint: 163921c75032da4867cae75935033fd1049e0c3e (WP-3 candidate: invited Preview access controls)
+Current Candidate: WP-3 replacement candidate / d3210a5e510ce060e4ffe55ca7b53087419467df
+Last Checkpoint: d3210a5e510ce060e4ffe55ca7b53087419467df (WP-3 verification patch candidate)
 Working Tree: clean after final WP-3 status provenance commit; no external state was changed.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
 Tests Completed: `./.venv/Scripts/python.exe run_core_tests.py` 41/41 passed, including `tests/test_preview_access.py` (invalid invite/no DB, invite binding, cross-invite isolation, request/generation quota, per-invite/global concurrency, release, logout, credential redaction). `tests/preview_release_smoke.py` passed (valid fake access exchange, Secure/HttpOnly/SameSite/Max-Age cookie, authenticated Conversation creation, logout then 401). Python compile, Node syntax, and diff whitespace checks passed.
