@@ -8,27 +8,27 @@ Autopilot State: RUNNING
 MILESTONE: PHASE_5_STABLE_REACHED
 Window Start: 2026-09-12 Asia/Shanghai
 Window Stop Gate: Engineering Foundation candidate accepted by the Product Owner
-Current Stage: Engineering Foundation Gate / Batch A
-Current Task: Automated Test Suite foundation audit and implementation planning.
+Current Stage: Engineering Foundation Gate / Batch A checkpoint complete
+Current Task: Batch A Reliability Core checkpoint complete; Batch B Permission Abstraction is the next authorized item when context/quota is safe.
 Current Branch: main
 Start Accepted Baseline: v0.4.0 / 7ddab006a618ede56e3d22d55ba2f212d8f47cd0
 Last Accepted Stable Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7
-Current Candidate: none; Engineering Foundation Batch A is beginning.
-Last Checkpoint: 78130be33c53d2c2b3c68e378ccc96cce9a144d7 - Phase 5 Stability Candidate accepted by the Product Owner after provenance verification.
+Current Candidate: none; Engineering Foundation Batch B has not started.
+Last Checkpoint: 4339f7157f289c5d5c5e954d5f21b372771bec9c - Batch A Reliability Core complete: deterministic core suite, redacted diagnostics, unified error boundary, additive migration history, and unified configuration boundaries.
 Working Tree: Candidate implementation is committed; expected clean after this status-only commit.
-Runtime Identity: XiaoG backend is healthy on 127.0.0.1:8000 as Python listener PID 25096 launched from D:/XiaoG/.venv/Scripts/python.exe main.py; accepted Phase 5 baseline 78130be33c53d2c2b3c68e378ccc96cce9a144d7 has no runtime-code delta from v0.4.3 baseline b04ac40.
-Tests Completed: Phase 5 Stable matrix passed. unittest 13/13: Conversation lifecycle/model-state, Draft no-empty-history, Auto/Manual routing, per-model reasoning, legacy compatibility, Provider Registry metadata/API and action-capability contracts. Python compileall, frontend Node syntax, product JSON and diff checks passed. Live /api/provider-status HTTP 200: Terra verified by official Codex App Server; Registry contains two Providers with no secret marker. SQLite PRAGMA integrity_check=ok and foreign_key_check empty. Isolated headless Edge verified Settings > Models & Intelligence > Provider Management for both Provider cards, official and separated action URLs, safe target/rel, no displayed secret, and all r3 cache-busted assets. No paid Provider request was made.
-Tests Pending: Engineering Foundation Batch A Automated Test Suite coverage audit, followed by Logging/Diagnostics, Unified Error Model, DB Migration History, and Unified Configuration System.
+Runtime Identity: XiaoG backend is healthy on 127.0.0.1:8000 as Python listener PID 24180 launched from D:/XiaoG/.venv/Scripts/python.exe main.py; Batch A code is active after restart.
+Tests Completed: Phase 5 Stable matrix retained. Engineering Foundation Batch A: run_core_tests.py deterministic local suite 20/20 passed; covers API contracts, safe DB migration history/idempotence, Conversation lifecycle, Search, Settings, Provider/Model Registry contracts, Auto Router, Phase 5 state regressions, Provider action contracts, diagnostics secret redaction, unified error contract, and configuration secret boundaries. Python compileall, frontend Node syntax, product JSON and diff checks passed. Live local runtime restart passed: /health and /api/provider-status HTTP 200; Terra and DeepSeek status available; live SQLite migration preserved conversation/message/settings counts 9/124/15, schema_version=003_personalization_defaults, integrity_check=ok, foreign_key_check empty; 404/422 responses expose unified credential-free detail.code/message/retryable/retry_action; startup diagnostics emitted database_initialized without secret marker. No paid Provider request was made.
+Tests Pending: Engineering Foundation Batch B future-safe foundation, then final Engineering Foundation regression and Candidate experience gate.
 Known Issues: none found in the affected v0.4.3 scope.
 Blockers: none
 Backlog / Future Suggestions: none
-Product Owner Gate: Phase 5 Stability Candidate 78130be33c53d2c2b3c68e378ccc96cce9a144d7 was accepted by the Product Owner and is the Phase 5 Accepted Stable Baseline. Engineering Foundation internal checkpoints are not Stable and do not require Product Owner experience unless a product-visible regression appears; its final Candidate still requires Product Owner Experience.
-Next Allowed Stage: Engineering Foundation Gate, Batch A only. Phase 5.5, Dual-Codex, Phase 6+, and unauthorized Workers remain prohibited.
+Product Owner Gate: Phase 5 Accepted Stable Baseline remains 78130be. Batch A is an internal recoverability checkpoint and requires no Product Owner experience because no product-visible regression was introduced. Engineering Foundation final Candidate still requires Product Owner Experience.
+Next Allowed Stage: Engineering Foundation Gate / Batch B, beginning with Permission Abstraction only when context/quota is safe. Phase 5.5, Dual-Codex, Phase 6+, and unauthorized Workers remain prohibited.
 Worker Status: No Worker is active in this Autopilot Window.
 Roadmap Delta Suggestion: Phase 5 Stable Engineering Addendum accepted by the Product Owner on 2026-09-13: permanent regression coverage for reproducible Product Owner bugs; state-machine-first design for stateful features; Conversation x Manual Model reasoning semantics; combination-path/state-transition regression; Provider action URL/capability/security contracts; quota-efficient local deterministic tests; and staged Local-first, GitHub-on-demand integration.
 Protocol Delta Suggestion: none
 GitHub Status: no remote is configured and GitHub CLI is not installed; no authentication or repository authorization was inferred. Creating a private repository, authenticating, adding a remote, or pushing requires explicit Product Owner action/authorization and does not block local XiaoG.
-Exact Next Action: Begin Engineering Foundation Batch A with the Automated Test Suite: inventory permanent coverage for all Phase 5 Product Owner bugs, identify deterministic gaps, and establish a concise one-command core regression path before Logging/Diagnostics.
+Exact Next Action: Begin Engineering Foundation Batch B at 10.6 Permission Abstraction; do not enter later Batch B items until its state ownership, persistence, lifecycle, fallback, and API boundary are explicit.
 ## Phase 5 Stable Milestone Engineering Addendum
 
 - Product Owner Bug -> Permanent Regression Test: every reproducible Product Owner bug should retain a deterministic regression that fails before and passes after the fix; Product Owner effort should focus on product semantics and experience.
@@ -41,3 +41,11 @@ Exact Next Action: Begin Engineering Foundation Batch A with the Automated Test 
 - GitHub Staging: local D:/XiaoG runtime, Git, working tree, and STATUS remain primary truth. Stage 1 permits a private remote and secret scan only with explicit authentication/repository authorization; Stage 2 CI follows Automated Tests; Stage 3 branch/PR/worktree/ownership rules follows Engineering Foundation before any Controlled Dual-Codex setup.
 - Future Handoff Requirement: carry this milestone, regression policy, state semantics, quota-efficiency policy, Provider action contract, GitHub staging, and scope guards into the Engineering Foundation handoff.
 - Scope Guard: no Phase 5.5, 16GB Controlled Dual-Codex, Phase 6+, unauthorized Worker, restored EXE/Installer, Public Cloud, Phase 9 commercialization, or dual desktop/cloud runtime.
+## Engineering Foundation Batch A Checkpoint
+
+- Checkpoint: 4339f7157f289c5d5c5e954d5f21b372771bec9c.
+- 10.1 Automated Test Suite: `run_core_tests.py` provides the concise local deterministic command; 20 tests cover required API, safe migrations, Conversation lifecycle, Search, Settings, Provider/Model Registry, Router, and retained Phase 5 regressions without real Provider calls.
+- 10.2 Logging / Diagnostics: redacted file/console logs and bounded local recent diagnostics exist; API and Router emit low-cardinality events; Authorization/API key/token patterns are redacted by regression test.
+- 10.3 Unified Error Model / Boundary: credential-free `detail` contracts provide code/message/retryable/retry_action across HTTP validation, HTTPException, Provider SSE errors, and unexpected API exceptions while preserving frontend `detail.message` compatibility.
+- 10.4 Database Migration History: `schema_migrations` tracks 001 core schema, 002 Conversation lifecycle/model state, and 003 personalization defaults. The live database upgraded additively with unchanged user row counts and passing integrity checks.
+- 10.5 Unified Configuration: explicit RuntimeConfig, ProviderConfig, ProviderSecrets and safe configuration summary distinguish local .env secrets, SQLite user settings, product_info metadata, and in-memory runtime state; legacy settings properties remain compatible.
