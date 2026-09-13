@@ -7,6 +7,7 @@ Autopilot State: `HANDOFF_REQUIRED`
 ## Window
 
 - Start provenance: `main` at `818376df2a62eb20b8f0d7f0ad72f195543d0a03`; the only initial working-tree differences were the Product Owner / Tech Lead-provided governance documents.
+- WP-1 local candidate: `12a3ed352b0af3db1f611babcb1d295fd0982114` (`candidate: add safe ephemeral preview mode`).
 - Allowed work: bounded local code/config/test/docs changes for a release baseline and non-persistent Preview mode.
 - Stop gate: WP-1 complete; Tech Lead review required before any WP-2 work.
 
