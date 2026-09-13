@@ -32,8 +32,8 @@ class PreviewAccessControl:
         q.append(now); return True
     def allow_request(self, invite_id: str) -> bool: return self._allow(self.requests, invite_id, self.runtime.preview_request_limit) and self._allow(self.requests, "__global__", self.runtime.preview_request_limit*max(1,len(self.runtime.preview_invites)))
     def acquire_generation(self, invite_id: str) -> bool:
-        if not self._allow(self.generations, invite_id, self.runtime.preview_generation_limit) or not self._allow(self.generations, "__global__", self.runtime.preview_generation_limit*max(1,len(self.runtime.preview_invites))): return False
         if self.active[invite_id]>=self.runtime.preview_max_concurrent_per_invite or self.global_active>=self.runtime.preview_max_concurrent_global: return False
+        if not self._allow(self.generations, invite_id, self.runtime.preview_generation_limit) or not self._allow(self.generations, "__global__", self.runtime.preview_generation_limit*max(1,len(self.runtime.preview_invites))): return False
         self.active[invite_id]+=1; self.global_active+=1; return True
     def release_generation(self, invite_id: str):
         if self.active[invite_id]: self.active[invite_id]-=1; self.global_active=max(0,self.global_active-1)

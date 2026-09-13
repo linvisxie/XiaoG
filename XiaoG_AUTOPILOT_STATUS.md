@@ -22,8 +22,8 @@ Current Candidate: WP-3 local candidate / 163921c75032da4867cae75935033fd1049e0c
 Last Checkpoint: 163921c75032da4867cae75935033fd1049e0c3e (WP-3 candidate: invited Preview access controls)
 Working Tree: clean after final WP-3 status provenance commit; no external state was changed.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
-Tests Completed: `run_core_tests.py` 37/37 passed (includes existing transient session-isolation and diagnostics credential-redaction coverage). `tests/preview_release_smoke.py` passed: valid fake invite exchange, Secure cookie issuance, then authenticated Conversation creation; no Provider call. Python compile, Node syntax, and diff whitespace checks passed.
-Tests Pending: No dedicated existing WP-3 deterministic tests were found for invalid invite rejection, failed-auth no-DB creation, invite/session binding, cross-invite isolation, per-invite/global rate or concurrency guards, pre-Provider blocking, counter release, or logout invalidation. These items must not be represented as verified by this closeout. No external deployment is authorized.
+Tests Completed: `./.venv/Scripts/python.exe run_core_tests.py` 41/41 passed, including `tests/test_preview_access.py` (invalid invite/no DB, invite binding, cross-invite isolation, request/generation quota, per-invite/global concurrency, release, logout, credential redaction). `tests/preview_release_smoke.py` passed (valid fake access exchange, Secure/HttpOnly/SameSite/Max-Age cookie, authenticated Conversation creation, logout then 401). Python compile, Node syntax, and diff whitespace checks passed.
+Tests Pending: No independent fake-stream test currently proves active counter release through each actual streaming success/error/cancel path; direct guard-release coverage exists. No external deployment is authorized.
 
 ## WP-1 Delivery
 

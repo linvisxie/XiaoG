@@ -39,10 +39,15 @@ async def main() -> None:
                         assert (await client.get(route)).status_code == 404
                     access = await client.post("/api/preview/access", json={"credential": "fake-preview-invite-credential-123456"})
                     assert access.status_code == 200
+                    assert access.json()["invite_id"] == "smoke"
+                    assert all(value in access.headers["set-cookie"].lower() for value in ("httponly", "secure", "samesite=lax", "max-age="))
                     cookie = access.headers["set-cookie"].split(";", 1)[0]
                     created = await client.post("/api/conversations", json={"title": "release smoke"}, headers={"cookie": cookie})
                     assert created.status_code == 201
                     assert "xiaog_preview_session=" in access.headers.get("set-cookie", "")
+                    logged_out = await client.post("/api/preview/logout", headers={"cookie": cookie})
+                    assert logged_out.status_code == 200
+                    assert (await client.get("/api/conversations", headers={"cookie": cookie})).status_code == 401
         finally:
             root = logging.getLogger()
             for handler in list(root.handlers):

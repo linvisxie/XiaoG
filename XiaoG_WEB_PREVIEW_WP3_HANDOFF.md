@@ -13,10 +13,10 @@ State: `HANDOFF_REQUIRED`
 
 ## Verification
 
-- `./.venv/Scripts/python.exe run_core_tests.py`: 37 passed, 0 failures/errors. Existing coverage includes WP-1 transient-session isolation and diagnostics credential redaction; it is not a dedicated WP-3 invite/quota suite.
-- `./.venv/Scripts/python.exe tests/preview_release_smoke.py`: passed. It verifies a valid fake invite exchange, Secure cookie issuance, and authenticated Conversation creation with no Provider request.
+- `./.venv/Scripts/python.exe run_core_tests.py`: 41 passed, 0 failures/errors. New `tests/test_preview_access.py` verifies invalid invite rejection with no session DB, invite/session identity binding, cross-invite SQLite non-access, no invite credential in SQLite/redacted text, per-invite/global request quota, per-invite/global generation concurrency, guard rejection before a generation is admitted, direct release of active counters, and logout invalidation.
+- `./.venv/Scripts/python.exe tests/preview_release_smoke.py`: passed. It verifies a valid fake invite exchange, invite ID response binding, Secure/HttpOnly/SameSite/Max-Age cookie attributes, authenticated Conversation creation, then logout and original-cookie 401; no Provider request.
 - Python/Node syntax and `git diff --check`: passed.
-- No existing deterministic WP-3 test evidence was found for invalid invite rejection, failed authentication creating no DB, invite/session binding, cross-invite isolation, per-invite/global rate or concurrency limits, guard-before-Provider behavior, counter release after stream outcomes, or logout invalidation. These are implementation claims not verified test evidence in this closeout.
+- No independent fake-stream test yet proves counter release through all actual streaming success/error/cancel paths; direct admission/release coverage exists. Do not present that specific stream-outcome coverage as complete.
 - No real Provider, invite distribution, external secret, hosting, remote, DNS, tunnel, or external access occurred. Terra remains disabled in Preview.
 
 ## Remaining blockers
