@@ -1,10 +1,10 @@
 # XiaoG Autopilot Status
 
 Protocol Version: v1.4 FINAL
-Activation ID: XIAOG-GOVERNANCE-UX-CLEANUP-2026-09-14-V1
+Activation ID: XIAOG-AUTOPILOT-WEB-PREVIEW-WP4-2026-09-14-V1
 Roadmap Version: XiaoG Master Roadmap v2 (2026-09-12) + Limited Public Preview Addendum v1 (2026-09-13) + Preview v1 Mode & Terra Gate Product Decision (2026-09-14)
 Roadmap Content Hash: 0f971684cae4eee043c113f3195aed461103139c344b3a272d11237d5d1e96f8
-Autopilot State: HANDOFF_REQUIRED
+Autopilot State: RUNNING
 MILESTONE: PHASE_5_STABLE_REACHED
 MILESTONE: ENGINEERING_FOUNDATION_ACCEPTED_STABLE
 MILESTONE: WP_0_WEB_PREVIEW_READINESS_AUDIT_COMPLETE
@@ -12,18 +12,18 @@ MILESTONE: WP_1_RELEASE_BASELINE_AND_SAFE_EPHEMERAL_PREVIEW_MODE_COMPLETE
 MILESTONE: WP_2_ISOLATED_RUNTIME_DATA_SECRET_BOUNDARY_COMPLETE
 MILESTONE: WP_3_INVITED_ACCESS_RATE_COST_ABUSE_BOUNDARY_COMPLETE
 Window Start: 2026-09-14 Asia/Shanghai
-Window Stop Gate: Governance UX Cleanup complete; await Tech Lead handoff review and next-stage decision.
-Current Stage: Governance UX Cleanup / Handoff Required
-Current Task: WP-3 is Accepted/Closed. Governance cleanup is authorized; WP-4 remains unauthorized.
+Window Stop Gate: WP-4 local CI/release/deployment readiness is complete; then hand off before any external CI, deployment, secret, registry, hosting, DNS, or access action.
+Current Stage: WP-4 — CI / Test-Gated Automatic Deployment / Running
+Current Task: Build only the bounded local CI, release, artifact, rollback, and verification readiness layer. WP-3 is Accepted/Closed; WP-4 external execution is not authorized.
 Current Branch: main
 Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Engineering Foundation product baseline / ffdfe3de10c87e50afc3d69017b1deaf7e883029
 Last Accepted Stable Baseline: WP-3 / 7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b
-Current Candidate: none (WP-3 Accepted / Closed)
+Current Candidate: none (WP-4 local readiness in progress)
 Last Checkpoint: 7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b (WP-3 streaming verification candidate)
-Working Tree: clean after Governance UX Cleanup commit; no external state was changed.
+Working Tree: clean at WP-4 start (`4047fc8d6fe41c09de747720506aa1ec26986673`); intentional bounded WP-4 local changes may be present while RUNNING.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
 Tests Completed: `./.venv/Scripts/python.exe run_core_tests.py` 44/44 passed, including `tests/test_preview_access.py` and `tests/test_preview_streaming.py`. The latter proves actual fake `StreamingResponse` success, Provider error, and client cancel each release the active generation counter and allow a later admission. `tests/preview_release_smoke.py` passed (valid fake access exchange, Secure/HttpOnly/SameSite/Max-Age cookie, authenticated Conversation creation, logout then 401). Python compile, Node syntax, and diff whitespace checks passed.
-Tests Pending: No external deployment is authorized.
+Tests Pending: WP-4 deterministic local release-gate simulation, optional local Docker build only if Docker is available, and final affected regression. No external CI or deployment is authorized.
 
 ## WP-1 Delivery
 
@@ -59,4 +59,4 @@ In the Product Owner's real default Edge environment, while Conversation A is pr
 - No GitHub remote is configured. No GitHub authentication/repository/remote/push, hosting project, DNS, cloud database/storage, external secret, tunnel, or external access was created or authorized.
 - DeepSeek Registry maintenance remains backlog only and was not implemented.
 - No Worker, Controlled Dual-Codex, Phase 5.5, Phase 6+, or deployment was started.
-- Exact next action: Tech Lead reviews Governance UX Cleanup and decides whether to authorize the next stage. WP-4, GitHub, hosting, DNS, external secrets, invited external access, and Terra must not start automatically.
+- Exact next action: Complete WP-4 local readiness only. GitHub authentication/repository/remote/push, hosting, DNS, external secrets, registry publish, invited external access, real Provider, and Terra must not start automatically.

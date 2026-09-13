@@ -1,0 +1,33 @@
+name: XiaoG WP-4 release gate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - run: python -m pip install -r requirements.txt
+      - run: python tools/ci/wp4_release_gate.py --revision "$GITHUB_SHA" --manifest "$RUNNER_TEMP/xiaog-release-manifest.json"
+      - name: Build local container artifact contract
+        run: |
+          docker build --build-arg XIAOG_SOURCE_REVISION="$GITHUB_SHA" --tag "xiaog-preview:$GITHUB_SHA" .
+          test "$(docker image inspect --format '{{ index .Config.Labels \"org.opencontainers.image.revision\" }}' "xiaog-preview:$GITHUB_SHA")" = "$GITHUB_SHA"
+
+# This definition intentionally has no deployment, registry, credential, or external-access job.
+# Those actions require a separate point-in-time Product Owner authorization.

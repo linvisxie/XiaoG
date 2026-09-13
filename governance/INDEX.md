@@ -7,6 +7,8 @@
 - Public Preview Addendum (Tech Lead controlled): `governance/core/XiaoG_Roadmap_Addendum_Public_Preview_v1_2026-09-13.md`
 - Product Decision (Tech Lead controlled): `governance/core/XiaoG_Public_Preview_Product_Decision_v1_2026-09-14.md`
 - Current STATUS: `governance/current/XiaoG_AUTOPILOT_STATUS.md`
+- Current WP-4 Activation: `governance/current/XiaoG_Autopilot_Activation_Web_Preview_WP4_v1_2026-09-14.md`
+- Current WP-4 Plan: `governance/current/XiaoG_WEB_PREVIEW_WP4_PLAN_2026-09-14.md`
 
 Archives: `governance/archive/wp0`, `wp1`, `wp2`, `wp3`; Foundation: `governance/archive/foundation`.
 
