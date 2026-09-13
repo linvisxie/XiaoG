@@ -14,6 +14,8 @@ from unittest.mock import patch
 from backend import main as api
 from backend.database import db as database
 from backend.diagnostics import RecentDiagnosticsHandler, redact_text
+from backend.errors import error_detail, normalize_http_detail
+from fastapi import HTTPException
 from backend.database.models import ConversationCreate, PersonalizationSettingsUpdate, SettingsUpdate
 from backend.router.auto_router import AutoRouter
 from backend.services.conversation_service import ConversationService
@@ -118,6 +120,16 @@ class CoreFoundationTests(unittest.TestCase):
         self.assertEqual(personalization["theme_mode"], "dark")
         self.assertEqual(searched["results"][0]["conversation_id"], created["id"])
 
+    def test_error_contract_preserves_message_and_exposes_retry_metadata(self) -> None:
+        provider = normalize_http_detail(
+            HTTPException(status_code=503, detail={"code": "provider_unavailable", "message": "Provider 暂不可用。"})
+        )
+        missing = normalize_http_detail(HTTPException(status_code=404, detail="找不到该会话。"))
+        unexpected = error_detail("internal_error", "请稍后重试。", retryable=True)
+
+        self.assertEqual(provider, {"code": "provider_unavailable", "message": "Provider 暂不可用。", "retryable": True, "retry_action": "retry"})
+        self.assertEqual(missing, {"code": "not_found", "message": "找不到该会话。", "retryable": False, "retry_action": None})
+        self.assertEqual(unexpected["retry_action"], "retry")
     def test_diagnostics_redact_credentials_from_text_and_recent_events(self) -> None:
         secret = "sk-this-must-not-appear-123456789"
         safe = redact_text(f"Authorization: Bearer {secret}; api_key={secret}; token={secret}")

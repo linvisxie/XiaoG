@@ -7,12 +7,15 @@ import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import settings
 from backend.diagnostics import configure_logging, diagnostic_logger, log_event
+from backend.errors import error_detail, normalize_http_detail
 from backend.database.db import initialize_database
 from backend.database.models import ChatRequest, ConversationCreate, ConversationTitleUpdate, SettingsUpdate, ConversationModelSettingsUpdate
 from backend.database.models import PersonalizationSettingsUpdate
@@ -48,6 +51,26 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="XiaoG", version=product_info_service.public_info().get("version", "unknown"), lifespan=lifespan)
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+@app.exception_handler(HTTPException)
+async def http_error_boundary(_request: Request, error: HTTPException) -> JSONResponse:
+    return JSONResponse(status_code=error.status_code, content={"detail": normalize_http_detail(error)})
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_boundary(_request: Request, _error: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={"detail": error_detail("validation_error", "请求参数无效，请检查后重试。")},
+    )
+
+
+@app.exception_handler(Exception)
+async def unexpected_error_boundary(_request: Request, error: Exception) -> JSONResponse:
+    logger.exception("Unhandled API error: %s", error)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": error_detail("internal_error", "小G遇到了意外问题，请稍后重试。", retryable=True)},
+    )
 
 
 def event_stream(event: str, data: dict) -> str:
@@ -339,9 +362,9 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
             raise
         except ProviderError as exc:
             logger.warning("Provider request failed: %s", exc)
-            yield event_stream("error", {"message": str(exc)})
+            yield event_stream("error", error_detail("provider_request_failed", str(exc), retryable=True))
         except Exception:
             logger.exception("Unexpected chat failure")
-            yield event_stream("error", {"message": "小G遇到了意外问题，请稍后重试。"})
+            yield event_stream("error", error_detail("internal_error", "小G遇到了意外问题，请稍后重试。", retryable=True))
 
     return StreamingResponse(generate(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
