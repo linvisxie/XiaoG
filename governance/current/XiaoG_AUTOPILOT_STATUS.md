@@ -1,7 +1,7 @@
 # XiaoG Autopilot Status
 
 Protocol Version: v1.4 FINAL
-Activation ID: XIAOG-AUTOPILOT-WEB-PREVIEW-WP3-2026-09-14-V1
+Activation ID: XIAOG-GOVERNANCE-UX-CLEANUP-2026-09-14-V1
 Roadmap Version: XiaoG Master Roadmap v2 (2026-09-12) + Limited Public Preview Addendum v1 (2026-09-13) + Preview v1 Mode & Terra Gate Product Decision (2026-09-14)
 Roadmap Content Hash: 0f971684cae4eee043c113f3195aed461103139c344b3a272d11237d5d1e96f8
 Autopilot State: HANDOFF_REQUIRED
@@ -12,13 +12,13 @@ MILESTONE: WP_1_RELEASE_BASELINE_AND_SAFE_EPHEMERAL_PREVIEW_MODE_COMPLETE
 MILESTONE: WP_2_ISOLATED_RUNTIME_DATA_SECRET_BOUNDARY_COMPLETE
 MILESTONE: WP_3_INVITED_ACCESS_RATE_COST_ABUSE_BOUNDARY_COMPLETE
 Window Start: 2026-09-14 Asia/Shanghai
-Window Stop Gate: WP-3 local invited access/rate/cost/abuse boundary is complete; await Tech Lead final governance acceptance and next-stage decision.
-Current Stage: WP-3 Invited Access / Rate / Cost / Abuse Boundary / Handoff Required
-Current Task: WP-3 local access boundary and deterministic checks are complete. Stop autonomous progression and hand off for Tech Lead review.
+Window Stop Gate: Governance UX Cleanup complete; await Tech Lead handoff review and next-stage decision.
+Current Stage: Governance UX Cleanup / Handoff Required
+Current Task: WP-3 is Accepted/Closed. Governance cleanup is authorized; WP-4 remains unauthorized.
 Current Branch: main
 Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Engineering Foundation product baseline / ffdfe3de10c87e50afc3d69017b1deaf7e883029
-Last Accepted Stable Baseline: Engineering Foundation / ffdfe3de10c87e50afc3d69017b1deaf7e883029
-Current Candidate: WP-3 replacement candidate / 7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b
+Last Accepted Stable Baseline: WP-3 / 7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b
+Current Candidate: none (WP-3 Accepted / Closed)
 Last Checkpoint: 7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b (WP-3 streaming verification candidate)
 Working Tree: clean after final WP-3 status provenance commit; no external state was changed.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
