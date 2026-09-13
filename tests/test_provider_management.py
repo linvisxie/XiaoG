@@ -1,6 +1,7 @@
 """Regression coverage for v0.4.3 Provider Management metadata."""
 
 import unittest
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from backend.main import get_providers
@@ -39,12 +40,25 @@ class ProviderManagementTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(providers["deepseek"]["usage_url"], "https://platform.deepseek.com/usage")
         self.assertEqual(providers["deepseek"]["billing_url"], "https://platform.deepseek.com/balance")
         self.assertEqual(providers["deepseek"]["recharge_url"], "https://platform.deepseek.com/top_up")
+        self.assertIsNone(providers["deepseek"]["recharge_strategy"])
+        self.assertEqual(providers["deepseek"]["action_capabilities"], {"usage": True, "billing": True, "recharge": True, "console": True})
         self.assertEqual(providers["terra"]["console_url"], "https://chatgpt.com/")
-        self.assertIsNone(providers["terra"]["recharge_url"])
+        self.assertEqual(providers["terra"]["usage_url"], "https://platform.openai.com/usage")
+        self.assertEqual(providers["terra"]["billing_url"], "https://platform.openai.com/account/billing/overview")
+        self.assertEqual(providers["terra"]["recharge_url"], "https://platform.openai.com/account/billing/overview")
+        self.assertEqual(providers["terra"]["recharge_strategy"], "billing_overview")
+        self.assertEqual(providers["terra"]["action_capabilities"], {"usage": True, "billing": True, "recharge": True, "console": True})
+        self.assertNotEqual(providers["terra"]["recharge_url"], providers["deepseek"]["recharge_url"])
         rendered = repr(snapshot).lower()
         self.assertNotIn("sk-", rendered)
         self.assertNotIn("api_key=", rendered)
 
+    def test_provider_management_actions_are_metadata_capability_driven(self) -> None:
+        frontend = (Path(__file__).resolve().parents[1] / "frontend" / "app.js").read_text(encoding="utf-8")
+        self.assertIn('[["usage", "查看用量", provider.usage_url], ["billing", "管理账单 / 额度", provider.billing_url], ["recharge", "充值", provider.recharge_url], ["console", "打开官方控制台", provider.console_url]]', frontend)
+        self.assertIn("actionCapabilities && actionCapabilities[action] !== true", frontend)
+        self.assertIn("renderManualReasoning(); renderProviderManagement(); syncModelStatus();", frontend)
+        self.assertNotIn("provider.recharge_url || provider.billing_url", frontend)
     async def test_provider_management_endpoint_reuses_registry_snapshot(self) -> None:
         expected = {"providers": [{"selection_key": "test", "status": "available"}], "models": []}
         with patch.object(model_router.registry, "snapshot", AsyncMock(return_value=expected)) as snapshot:

@@ -28,6 +28,7 @@ class ProviderDefinition:
     usage_url: str | None = None
     billing_url: str | None = None
     recharge_url: str | None = None
+    recharge_strategy: str | None = None
 
 
 class ModelRegistry:
@@ -52,8 +53,12 @@ class ModelRegistry:
             capabilities=("text", "streaming", "reasoning"),
             configuration={"credential_type": "chatgpt_session", "transport": "official_codex_app_server"},
             console_url="https://chatgpt.com/",
-            usage_url="https://chatgpt.com/",
-            billing_url="https://help.openai.com/en/articles/9039756-managing-billing-for-chatgpt-and-the-api-platform",
+            usage_url="https://platform.openai.com/usage",
+            billing_url="https://platform.openai.com/account/billing/overview",
+            # OpenAI documents recharging from Billing Overview: users select
+            # "Buy credits" or "Add to credit balance" on that official page.
+            recharge_url="https://platform.openai.com/account/billing/overview",
+            recharge_strategy="billing_overview",
         ),
     }
 
@@ -143,6 +148,13 @@ class ModelRegistry:
                 "usage_url": definition.usage_url,
                 "billing_url": definition.billing_url,
                 "recharge_url": definition.recharge_url,
+                "recharge_strategy": definition.recharge_strategy,
+                "action_capabilities": {
+                    "usage": bool(definition.usage_url),
+                    "billing": bool(definition.billing_url),
+                    "recharge": bool(definition.recharge_url),
+                    "console": bool(definition.console_url),
+                },
             })
         return {"providers": providers, "models": models}
 

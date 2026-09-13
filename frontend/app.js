@@ -315,7 +315,9 @@ function renderProviderManagement() {
     const configLine = document.createElement("p"); configLine.className = "provider-detail"; configLine.textContent = providerManagementLabel("连接配置") + "：" + (config.map(([key, value]) => key + "=" + value).join(" · ") || "—"); card.append(configLine);
     const note = document.createElement("p"); note.className = "dialog-tip provider-security-note"; note.textContent = providerManagementLabel("配置仅在本机管理；不会显示密钥。"); card.append(note);
     const actions = document.createElement("div"); actions.className = "provider-actions";
-    for (const [label, url] of [["查看用量", provider.usage_url], ["管理账单 / 额度", provider.billing_url], ["充值", provider.recharge_url], ["打开官方控制台", provider.console_url]]) {
+    const actionCapabilities = provider.action_capabilities && typeof provider.action_capabilities === "object" ? provider.action_capabilities : null;
+    for (const [action, label, url] of [["usage", "查看用量", provider.usage_url], ["billing", "管理账单 / 额度", provider.billing_url], ["recharge", "充值", provider.recharge_url], ["console", "打开官方控制台", provider.console_url]]) {
+      if (actionCapabilities && actionCapabilities[action] !== true) continue;
       const link = providerManagementLink(label, url); if (link) actions.append(link);
     }
     if (!actions.childElementCount) { const unavailable = document.createElement("span"); unavailable.className = "dialog-tip"; unavailable.textContent = providerManagementLabel("此 Provider 未提供此入口。"); actions.append(unavailable); }
@@ -381,7 +383,7 @@ async function loadProviderStatus() {
     if (deepseek) deepseek.textContent = deepseekModel?.display_name || "…"; if (defaultDeepseek) defaultDeepseek.textContent = deepseekModel?.display_name || "…"; if (terra) { terra.textContent = terraModel?.display_name || "…"; terra.disabled = !status.terra.available; } if (defaultTerra) { defaultTerra.textContent = terraModel?.display_name || "…"; defaultTerra.disabled = !status.terra.available; }
     if (!status.terra.available && modelSelect.value === "terra") modelSelect.value = "deepseek";
     const note = $("#provider-note"); if (note) note.textContent = status.terra.available ? "Terra 可用；可在右侧切换模型。" : status.terra.message;
-    renderManualReasoning(); syncModelStatus();
+    renderManualReasoning(); renderProviderManagement(); syncModelStatus();
   } catch (error) { console.error("provider-status UI initialization failed", error); const note = $("#provider-note"); if (note) note.textContent = "模型状态界面初始化失败，请刷新页面。"; notify("模型状态界面初始化失败", "error"); }
 }
 
