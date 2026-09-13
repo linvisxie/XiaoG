@@ -20,7 +20,7 @@ Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Eng
 Last Accepted Stable Baseline: WP-3 / 7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b
 Current Candidate: none (WP-3 Accepted / Closed)
 Last Checkpoint: 7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b (WP-3 streaming verification candidate)
-Working Tree: clean after final WP-3 status provenance commit; no external state was changed.
+Working Tree: clean after Governance UX Cleanup commit; no external state was changed.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
 Tests Completed: `./.venv/Scripts/python.exe run_core_tests.py` 44/44 passed, including `tests/test_preview_access.py` and `tests/test_preview_streaming.py`. The latter proves actual fake `StreamingResponse` success, Provider error, and client cancel each release the active generation counter and allow a later admission. `tests/preview_release_smoke.py` passed (valid fake access exchange, Secure/HttpOnly/SameSite/Max-Age cookie, authenticated Conversation creation, logout then 401). Python compile, Node syntax, and diff whitespace checks passed.
 Tests Pending: No external deployment is authorized.
@@ -59,4 +59,4 @@ In the Product Owner's real default Edge environment, while Conversation A is pr
 - No GitHub remote is configured. No GitHub authentication/repository/remote/push, hosting project, DNS, cloud database/storage, external secret, tunnel, or external access was created or authorized.
 - DeepSeek Registry maintenance remains backlog only and was not implemented.
 - No Worker, Controlled Dual-Codex, Phase 5.5, Phase 6+, or deployment was started.
-- Exact next action: Tech Lead reviews WP-3 and decides whether to authorize the next Preview step. WP-4, GitHub, hosting, DNS, external secrets, invited external access, and Terra must not start automatically.
+- Exact next action: Tech Lead reviews Governance UX Cleanup and decides whether to authorize the next stage. WP-4, GitHub, hosting, DNS, external secrets, invited external access, and Terra must not start automatically.
