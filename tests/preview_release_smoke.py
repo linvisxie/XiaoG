@@ -18,6 +18,7 @@ async def main() -> None:
             "XIAOG_RUNTIME_MODE": "preview", "XIAOG_DATA_DIR": temporary,
             "XIAOG_LOG_DIR": f"{temporary}/logs", "XIAOG_RELEASE_ID": "wp2-local-smoke",
             "XIAOG_PREVIEW_PROVIDER_ALLOWLIST": "deepseek",
+            "XIAOG_PREVIEW_INVITES": '{"smoke":"fake-preview-invite-credential-123456"}',
             # Deliberately non-real placeholder: no provider request is made in this smoke.
             "DEEPSEEK_API_KEY": "preview-smoke-placeholder",
         })
@@ -36,9 +37,12 @@ async def main() -> None:
                     assert health.json()["release_id"] == "wp2-local-smoke"
                     for route in ("/docs", "/redoc", "/openapi.json"):
                         assert (await client.get(route)).status_code == 404
-                    created = await client.post("/api/conversations", json={"title": "release smoke"})
+                    access = await client.post("/api/preview/access", json={"credential": "fake-preview-invite-credential-123456"})
+                    assert access.status_code == 200
+                    cookie = access.headers["set-cookie"].split(";", 1)[0]
+                    created = await client.post("/api/conversations", json={"title": "release smoke"}, headers={"cookie": cookie})
                     assert created.status_code == 201
-                    assert "xiaog_preview_session=" in created.headers.get("set-cookie", "")
+                    assert "xiaog_preview_session=" in access.headers.get("set-cookie", "")
         finally:
             root = logging.getLogger()
             for handler in list(root.handlers):

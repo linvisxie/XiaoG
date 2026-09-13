@@ -9,6 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from pathlib import Path
 import os
+import json
 
 from dotenv import load_dotenv
 
@@ -42,6 +43,14 @@ class RuntimeConfig:
     preview_provider_allowlist: tuple[str, ...] = field(
         default_factory=lambda: tuple(item.strip() for item in os.getenv("XIAOG_PREVIEW_PROVIDER_ALLOWLIST", "deepseek").split(",") if item.strip())
     )
+    preview_invites: dict[str, str] = field(default_factory=lambda: json.loads(os.getenv("XIAOG_PREVIEW_INVITES", "{}")))
+    preview_session_ttl_seconds: int = field(default_factory=lambda: int(os.getenv("XIAOG_PREVIEW_SESSION_TTL_SECONDS", "3600")))
+    preview_request_limit: int = field(default_factory=lambda: int(os.getenv("XIAOG_PREVIEW_REQUEST_LIMIT", "30")))
+    preview_generation_limit: int = field(default_factory=lambda: int(os.getenv("XIAOG_PREVIEW_GENERATION_LIMIT", "12")))
+    preview_window_seconds: int = field(default_factory=lambda: int(os.getenv("XIAOG_PREVIEW_WINDOW_SECONDS", "60")))
+    preview_max_concurrent_per_invite: int = field(default_factory=lambda: int(os.getenv("XIAOG_PREVIEW_MAX_CONCURRENT_PER_INVITE", "1")))
+    preview_max_concurrent_global: int = field(default_factory=lambda: int(os.getenv("XIAOG_PREVIEW_MAX_CONCURRENT_GLOBAL", "3")))
+    preview_max_input_chars: int = field(default_factory=lambda: int(os.getenv("XIAOG_PREVIEW_MAX_INPUT_CHARS", "12000")))
 
     def __post_init__(self) -> None:
         if self.runtime_mode not in {"local", "preview"}:
@@ -57,6 +66,8 @@ class RuntimeConfig:
                 raise ValueError("Preview mode requires an explicit XIAOG_RELEASE_ID.")
             if set(self.preview_provider_allowlist) != {"deepseek"}:
                 raise ValueError("WP-1 Preview permits only the DeepSeek provider allowlist.")
+            if not self.preview_invites or not all(isinstance(key, str) and isinstance(value, str) and key and len(value) >= 16 for key, value in self.preview_invites.items()):
+                raise ValueError("Preview requires XIAOG_PREVIEW_INVITES JSON with non-secret IDs and high-entropy credentials.")
 
     @property
     def preview_enabled(self) -> bool:

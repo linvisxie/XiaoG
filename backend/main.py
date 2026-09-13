@@ -28,6 +28,7 @@ from backend.services.memory_service import memory_service
 from backend.services.search_service import search_service
 from backend.services.product_info_service import product_info_service
 from backend.preview import PreviewSessionRegistry, preview_surface_options
+from backend.preview_access import PreviewAccessControl
 
 
 logger = diagnostic_logger('api')
@@ -39,6 +40,7 @@ async def lifespan(_app: FastAPI):
     configure_logging(settings.log_dir, settings.log_level)
     if settings.runtime.preview_enabled:
         preview_sessions.reset_for_startup()
+        preview_access.reset()
     else:
         initialize_database()
     log_event(logger, 20, "database_initialized")
@@ -62,6 +64,7 @@ app = FastAPI(
 )
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 preview_sessions = PreviewSessionRegistry(settings.runtime.data_dir)
+preview_access = PreviewAccessControl(settings.runtime)
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
 
@@ -70,16 +73,15 @@ async def preview_session_boundary(request: Request, call_next):
     """Give every Preview browser an opaque, server-issued, isolated SQLite scope."""
     if not settings.runtime.preview_enabled or not request.url.path.startswith("/api/"):
         return await call_next(request)
-    token, database_path, created = preview_sessions.database_for(
-        request.cookies.get("xiaog_preview_session")
-    )
-    with use_database_path(database_path):
-        initialize_database()
-        response = await call_next(request)
-    if created:
-        response.set_cookie(
-            "xiaog_preview_session", token, httponly=True, samesite="lax", secure=True, path="/"
-        )
+    if request.url.path == "/api/preview/access": return await call_next(request)
+    token=request.cookies.get("xiaog_preview_session"); session=preview_access.session(token)
+    if not session: return JSONResponse(status_code=401, content={"detail": error_detail("preview_auth_required", "需要有效的邀请码访问 Preview。")})
+    if not preview_access.allow_request(session.invite_id): return JSONResponse(status_code=429, content={"detail": error_detail("preview_rate_limited", "请求过于频繁，请稍后重试。", retryable=True)})
+    request.state.preview_session=session; invite_token=preview_access.current_invite.set(session.invite_id)
+    try:
+        with use_database_path(session.database_path):
+            initialize_database(); response = await call_next(request)
+    finally: preview_access.current_invite.reset(invite_token)
     return response
 @app.exception_handler(HTTPException)
 async def http_error_boundary(_request: Request, error: HTTPException) -> JSONResponse:
@@ -120,6 +122,25 @@ async def health() -> dict:
         "phase": info.get("phase", "unknown"), "commit": info.get("commit", "unavailable"),
         "runtime_mode": settings.runtime.runtime_mode, "release_id": settings.runtime.release_id,
     }
+
+@app.post("/api/preview/access")
+async def preview_access_exchange(payload: dict, request: Request) -> JSONResponse:
+    if not settings.runtime.preview_enabled:
+        raise HTTPException(status_code=404, detail="Preview access is unavailable in local mode.")
+    credential = payload.get("credential") if isinstance(payload, dict) else None
+    if not isinstance(credential, str) or len(credential) > 512:
+        raise HTTPException(status_code=401, detail="邀请码无效或已过期。")
+    session = preview_access.exchange(credential, preview_sessions.session_dir)
+    if not session:
+        raise HTTPException(status_code=401, detail="邀请码无效或已过期。")
+    response = JSONResponse({"authenticated": True, "invite_id": session.invite_id})
+    response.set_cookie("xiaog_preview_session", session.token, max_age=settings.runtime.preview_session_ttl_seconds, httponly=True, samesite="lax", secure=True, path="/")
+    return response
+
+@app.post("/api/preview/logout")
+async def preview_logout(request: Request) -> JSONResponse:
+    preview_access.logout(request.cookies.get("xiaog_preview_session"))
+    response = JSONResponse({"authenticated": False}); response.delete_cookie("xiaog_preview_session", path="/"); return response
 
 
 @app.get("/api/about")
@@ -335,6 +356,14 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
     content = payload.content.strip()
     if not content:
         raise HTTPException(status_code=422, detail="消息不能为空。")
+    preview_invite_id = None
+    if settings.runtime.preview_enabled:
+        preview_invite_id = preview_access.current_invite.get()
+        if not preview_invite_id: raise HTTPException(status_code=401, detail="Preview authentication required.")
+        if len(content) > settings.runtime.preview_max_input_chars:
+            raise HTTPException(status_code=413, detail="Preview 输入长度超过限制。")
+        if not preview_access.acquire_generation(preview_invite_id):
+            raise HTTPException(status_code=429, detail="Preview 生成额度或并发已达上限，请稍后重试。")
 
     try:
         context_characters = sum(len(str(message.get("content") or "")) for message in conversation_service.list_messages(conversation_id))
@@ -357,11 +386,10 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
     async def generate():
         # Streaming may outlive middleware dispatch; retain the caller's isolated scope.
         with use_database_path(request_database_path):
-            async for event in _generate_chat_events(
-                conversation_id, content, conversation, provider, display_name, selected_effort,
-                model_metadata, routing, user_message,
-            ):
-                yield event
+            try:
+                async for event in _generate_chat_events(conversation_id, content, conversation, provider, display_name, selected_effort, model_metadata, routing, user_message): yield event
+            finally:
+                if preview_invite_id: preview_access.release_generation(preview_invite_id)
 
     return StreamingResponse(generate(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 

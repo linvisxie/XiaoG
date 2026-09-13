@@ -39,7 +39,7 @@ class PreviewModeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             with patch.dict(os.environ, {
                 "XIAOG_RUNTIME_MODE": "preview", "XIAOG_DATA_DIR": temporary,
-                "XIAOG_RELEASE_ID": "wp1-test-release", "XIAOG_PREVIEW_PROVIDER_ALLOWLIST": "deepseek",
+                "XIAOG_RELEASE_ID": "wp1-test-release", "XIAOG_PREVIEW_PROVIDER_ALLOWLIST": "deepseek", "XIAOG_PREVIEW_INVITES": '{"test":"fake-preview-invite-credential-123456"}',
             }, clear=True):
                 preview = RuntimeConfig()
         self.assertTrue(preview.preview_enabled)
