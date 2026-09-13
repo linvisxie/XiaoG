@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
+from contextvars import ContextVar
 from datetime import datetime, timezone
 
 from backend.config import settings
@@ -15,6 +16,7 @@ DEFAULT_SYSTEM_PROMPT = """你叫“小G”。
 交流原则：自然、诚实、直接、简洁；不刻意讨好用户；能够理解用户，但保持独立判断；发现用户逻辑有问题时可以指出；不知道的事情明确说不知道；不要为了显得聪明而编造事实；不要机械重复用户长期资料。"""
 
 Migration = tuple[str, Callable[[sqlite3.Connection], None]]
+_database_path_override: ContextVar[Path | None] = ContextVar("xiaog_database_path_override", default=None)
 
 
 def now_iso() -> str:
@@ -23,8 +25,9 @@ def now_iso() -> str:
 
 @contextmanager
 def get_connection() -> Iterator[sqlite3.Connection]:
-    settings.database_path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(settings.database_path)
+    database_path = active_database_path()
+    database_path.parent.mkdir(parents=True, exist_ok=True)
+    connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
     try:
@@ -35,6 +38,21 @@ def get_connection() -> Iterator[sqlite3.Connection]:
         raise
     finally:
         connection.close()
+
+
+def active_database_path() -> Path:
+    """Return the request-scoped Preview database or the normal local database."""
+    return _database_path_override.get() or settings.database_path
+
+
+@contextmanager
+def use_database_path(database_path: Path) -> Iterator[None]:
+    """Scope a request to an isolated SQLite file without mutating local settings."""
+    token = _database_path_override.set(database_path)
+    try:
+        yield
+    finally:
+        _database_path_override.reset(token)
 
 
 def _migrate_core_schema(conn: sqlite3.Connection) -> None:

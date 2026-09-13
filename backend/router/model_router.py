@@ -1,11 +1,13 @@
 """Model selection facade for strict Manual and transparent Auto modes."""
 
 from backend.diagnostics import diagnostic_logger, log_event
+from backend.config import settings
 from backend.providers.base import ModelProvider, ProviderError
 from backend.providers.deepseek import DeepSeekProvider
 from backend.providers.terra import TerraProvider
 from backend.router.auto_router import AutoRouter
 from backend.services.model_registry import ModelRegistry
+from backend.preview import preview_provider_allowlist
 
 
 logger = diagnostic_logger('router')
@@ -15,7 +17,10 @@ class ModelRouter:
     def __init__(self) -> None:
         self.deepseek = DeepSeekProvider()
         self.terra = TerraProvider()
-        self.registry = ModelRegistry({"deepseek": self.deepseek, "terra": self.terra})
+        self.registry = ModelRegistry(
+            {"deepseek": self.deepseek, "terra": self.terra},
+            allowed_provider_keys=preview_provider_allowlist(settings.runtime),
+        )
 
     async def select(self, preference: str) -> tuple[ModelProvider, str]:
         provider, display_name, _effort, _model = await self.select_manual(preference, None)

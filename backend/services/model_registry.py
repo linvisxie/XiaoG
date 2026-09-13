@@ -63,8 +63,9 @@ class ModelRegistry:
         ),
     }
 
-    def __init__(self, providers: dict[str, ModelProvider]) -> None:
+    def __init__(self, providers: dict[str, ModelProvider], allowed_provider_keys: frozenset[str] | None = None) -> None:
         self._providers = providers
+        self._allowed_provider_keys = allowed_provider_keys
 
     async def snapshot(self) -> dict[str, Any]:
         """Return one public, credential-free snapshot of registered models."""
@@ -125,6 +126,11 @@ class ModelRegistry:
     async def _provider_states(self) -> dict[str, ProviderStatus]:
         states: dict[str, ProviderStatus] = {}
         for selection_key, definition in self._definitions.items():
+            if self._allowed_provider_keys is not None and selection_key not in self._allowed_provider_keys:
+                states[selection_key] = ProviderStatus(
+                    definition.provider_id, False, "当前运行模式未启用该 Provider。", []
+                )
+                continue
             provider = self._providers[selection_key]
             try:
                 states[selection_key] = await provider.health_check()

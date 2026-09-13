@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from backend.config import settings
 from backend.diagnostics import configure_logging, diagnostic_logger, log_event
 from backend.errors import error_detail, normalize_http_detail
-from backend.database.db import initialize_database
+from backend.database.db import active_database_path, initialize_database, use_database_path
 from backend.database.models import ChatRequest, ConversationCreate, ConversationTitleUpdate, SettingsUpdate, ConversationModelSettingsUpdate
 from backend.database.models import PersonalizationSettingsUpdate
 from backend.pricing import estimate_deepseek_cost
@@ -27,6 +27,7 @@ from backend.services.conversation_service import conversation_service
 from backend.services.memory_service import memory_service
 from backend.services.search_service import search_service
 from backend.services.product_info_service import product_info_service
+from backend.preview import PreviewSessionRegistry, preview_surface_options
 
 
 logger = diagnostic_logger('api')
@@ -35,22 +36,50 @@ logger = diagnostic_logger('api')
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     configure_logging(settings.log_dir, settings.log_level)
-    initialize_database()
+    if settings.runtime.preview_enabled:
+        preview_sessions.reset_for_startup()
+    else:
+        initialize_database()
     log_event(logger, 20, "database_initialized")
-    try:
-        await codex_app_server_manager.start()
-    except ProviderError as exc:
-        # DeepSeek remains usable if Codex is unavailable at application boot.
-        logger.warning("Codex App Server was not ready at startup: %s", exc)
+    if not settings.runtime.preview_enabled or "terra" in settings.runtime.preview_provider_allowlist:
+        try:
+            await codex_app_server_manager.start()
+        except ProviderError as exc:
+            # DeepSeek remains usable if Codex is unavailable at application boot.
+            logger.warning("Codex App Server was not ready at startup: %s", exc)
     try:
         yield
     finally:
         await codex_app_server_manager.close()
 
 
-app = FastAPI(title="XiaoG", version=product_info_service.public_info().get("version", "unknown"), lifespan=lifespan)
+app = FastAPI(
+    title="XiaoG",
+    version=product_info_service.public_info().get("version", "unknown"),
+    lifespan=lifespan,
+    **preview_surface_options(settings.runtime),
+)
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+preview_sessions = PreviewSessionRegistry(settings.runtime.data_dir)
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
+
+
+@app.middleware("http")
+async def preview_session_boundary(request: Request, call_next):
+    """Give every Preview browser an opaque, server-issued, isolated SQLite scope."""
+    if not settings.runtime.preview_enabled or not request.url.path.startswith("/api/"):
+        return await call_next(request)
+    token, database_path, created = preview_sessions.database_for(
+        request.cookies.get("xiaog_preview_session")
+    )
+    with use_database_path(database_path):
+        initialize_database()
+        response = await call_next(request)
+    if created:
+        response.set_cookie(
+            "xiaog_preview_session", token, httponly=True, samesite="lax", secure=True, path="/"
+        )
+    return response
 @app.exception_handler(HTTPException)
 async def http_error_boundary(_request: Request, error: HTTPException) -> JSONResponse:
     return JSONResponse(status_code=error.status_code, content={"detail": normalize_http_detail(error)})
@@ -85,7 +114,11 @@ async def index() -> FileResponse:
 @app.get("/health")
 async def health() -> dict:
     info = product_info_service.public_info()
-    return {"status": "ok", "app": "XiaoG", "version": info.get("version", "unknown"), "phase": info.get("phase", "unknown")}
+    return {
+        "status": "ok", "app": "XiaoG", "version": info.get("version", "unknown"),
+        "phase": info.get("phase", "unknown"), "commit": info.get("commit", "unavailable"),
+        "runtime_mode": settings.runtime.runtime_mode, "release_id": settings.runtime.release_id,
+    }
 
 
 @app.get("/api/about")
@@ -318,53 +351,68 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
 
     user_message = conversation_service.add_message(conversation_id, "user", content)
     conversation_service.set_title_from_first_message(conversation_id, content)
+    request_database_path = active_database_path()
+
     async def generate():
-        answer = ""
-        usage = None
-        actual_model = model_metadata["model_id"]
-        provider_name = provider.name
-        billing_type = getattr(provider, "billing_type", "api")
-        started = time.perf_counter()
-        try:
-            system_prompt = conversation_service.get_setting("system_prompt")
-            profile = memory_service.get_user_profile()
-            memories = memory_service.get_relevant_memories(content)
-            model_messages = conversation_service.build_model_messages(conversation_id, system_prompt, profile, memories)
-            yield event_stream("meta", {"provider": provider.name, "provider_id": model_metadata["provider_id"], "model": actual_model, "model_id": actual_model, "display_name": display_name, "reasoning_effort": selected_effort, "routing": routing})
-            stream = (
-                provider.stream_chat(
-                    model_messages,
-                    selected_effort,
-                    conversation_id=conversation_id,
-                    user_message_id=user_message["id"],
-                )
-                if provider.name == "openai_codex"
-                else provider.stream_chat(model_messages, selected_effort)
-            )
-            async for item in stream:
-                if item["type"] == "delta":
-                    answer += item["content"]
-                    yield event_stream("delta", {"content": item["content"]})
-                elif item["type"] == "usage":
-                    usage = item["usage"]
-                    actual_model = item.get("model") or actual_model
-            if not answer:
-                raise ProviderError("模型没有返回可显示的内容，请稍后重试。")
-            latency_ms = round((time.perf_counter() - started) * 1000)
-            conversation_service.add_message(conversation_id, "assistant", answer, provider_name, actual_model)
-            cost = estimate_deepseek_cost(actual_model, usage) if provider.name == "deepseek" else None
-            conversation_service.record_usage(conversation_id, provider_name, actual_model, usage, cost, latency_ms, billing_type)
-            yield event_stream("done", {"provider": provider.name, "provider_id": model_metadata["provider_id"], "model": actual_model, "model_id": actual_model, "display_name": display_name, "reasoning_effort": selected_effort, "usage": usage, "latency_ms": latency_ms})
-        except asyncio.CancelledError:
-            # A browser-side Stop cancels the request. Save any content already received.
-            if answer:
-                conversation_service.add_message(conversation_id, "assistant", answer + "\n\n[已停止生成]", provider_name, actual_model)
-            raise
-        except ProviderError as exc:
-            logger.warning("Provider request failed: %s", exc)
-            yield event_stream("error", error_detail("provider_request_failed", str(exc), retryable=True))
-        except Exception:
-            logger.exception("Unexpected chat failure")
-            yield event_stream("error", error_detail("internal_error", "小G遇到了意外问题，请稍后重试。", retryable=True))
+        # Streaming may outlive middleware dispatch; retain the caller's isolated scope.
+        with use_database_path(request_database_path):
+            async for event in _generate_chat_events(
+                conversation_id, content, conversation, provider, display_name, selected_effort,
+                model_metadata, routing, user_message,
+            ):
+                yield event
 
     return StreamingResponse(generate(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+async def _generate_chat_events(
+    conversation_id: str, content: str, conversation: dict, provider, display_name: str,
+    selected_effort: str | None, model_metadata: dict, routing: dict | None, user_message: dict,
+):
+    """The existing SSE contract, factored to preserve a Preview request database scope."""
+    answer = ""
+    usage = None
+    actual_model = model_metadata["model_id"]
+    provider_name = provider.name
+    billing_type = getattr(provider, "billing_type", "api")
+    started = time.perf_counter()
+    try:
+        system_prompt = conversation_service.get_setting("system_prompt")
+        profile = memory_service.get_user_profile()
+        memories = memory_service.get_relevant_memories(content)
+        model_messages = conversation_service.build_model_messages(conversation_id, system_prompt, profile, memories)
+        yield event_stream("meta", {"provider": provider.name, "provider_id": model_metadata["provider_id"], "model": actual_model, "model_id": actual_model, "display_name": display_name, "reasoning_effort": selected_effort, "routing": routing})
+        stream = (
+            provider.stream_chat(
+                model_messages,
+                selected_effort,
+                conversation_id=conversation_id,
+                user_message_id=user_message["id"],
+            )
+            if provider.name == "openai_codex"
+            else provider.stream_chat(model_messages, selected_effort)
+        )
+        async for item in stream:
+            if item["type"] == "delta":
+                answer += item["content"]
+                yield event_stream("delta", {"content": item["content"]})
+            elif item["type"] == "usage":
+                usage = item["usage"]
+                actual_model = item.get("model") or actual_model
+        if not answer:
+            raise ProviderError("模型没有返回可显示的内容，请稍后重试。")
+        latency_ms = round((time.perf_counter() - started) * 1000)
+        conversation_service.add_message(conversation_id, "assistant", answer, provider_name, actual_model)
+        cost = estimate_deepseek_cost(actual_model, usage) if provider.name == "deepseek" else None
+        conversation_service.record_usage(conversation_id, provider_name, actual_model, usage, cost, latency_ms, billing_type)
+        yield event_stream("done", {"provider": provider.name, "provider_id": model_metadata["provider_id"], "model": actual_model, "model_id": actual_model, "display_name": display_name, "reasoning_effort": selected_effort, "usage": usage, "latency_ms": latency_ms})
+    except asyncio.CancelledError:
+        if answer:
+            conversation_service.add_message(conversation_id, "assistant", answer + "\n\n[已停止生成]", provider_name, actual_model)
+        raise
+    except ProviderError as exc:
+        logger.warning("Provider request failed: %s", exc)
+        yield event_stream("error", error_detail("provider_request_failed", str(exc), retryable=True))
+    except Exception:
+        logger.exception("Unexpected chat failure")
+        yield event_stream("error", error_detail("internal_error", "小G遇到了意外问题，请稍后重试。", retryable=True))

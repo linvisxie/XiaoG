@@ -1,26 +1,37 @@
 # XiaoG Autopilot Status
 
 Protocol Version: v1.4 FINAL
-Activation ID: XIAOG-AUTOPILOT-WEB-PREVIEW-READINESS-2026-09-13-V1
-Roadmap Version: XiaoG Master Roadmap v2 (2026-09-12) + Limited Public Preview Addendum v1 (2026-09-13)
+Activation ID: XIAOG-AUTOPILOT-WEB-PREVIEW-WP1-2026-09-14-V1
+Roadmap Version: XiaoG Master Roadmap v2 (2026-09-12) + Limited Public Preview Addendum v1 (2026-09-13) + Preview v1 Mode & Terra Gate Product Decision (2026-09-14)
 Roadmap Content Hash: 0f971684cae4eee043c113f3195aed461103139c344b3a272d11237d5d1e96f8
 Autopilot State: HANDOFF_REQUIRED
 MILESTONE: PHASE_5_STABLE_REACHED
 MILESTONE: ENGINEERING_FOUNDATION_ACCEPTED_STABLE
 MILESTONE: WP_0_WEB_PREVIEW_READINESS_AUDIT_COMPLETE
-Window Start: 2026-09-13 Asia/Shanghai
-Window Stop Gate: WP-0 read-only Web Preview Readiness Audit delivered; Tech Lead decision and any external-service authorization are required before later Preview work.
-Current Stage: WP-0 Web Preview Readiness Audit / Handoff Required
-Current Task: Audit is complete. Stop autonomous progression and transfer the documented decision to Tech Lead.
+MILESTONE: WP_1_RELEASE_BASELINE_AND_SAFE_EPHEMERAL_PREVIEW_MODE_COMPLETE
+Window Start: 2026-09-14 Asia/Shanghai
+Window Stop Gate: WP-1 local release baseline and safe ephemeral Preview mode delivered; Tech Lead review is required before WP-2.
+Current Stage: WP-1 Release Baseline + Safe Ephemeral Preview Mode / Handoff Required
+Current Task: WP-1 implementation and deterministic verification are complete. Stop autonomous progression and hand off for Tech Lead review.
 Current Branch: main
 Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Engineering Foundation product baseline / ffdfe3de10c87e50afc3d69017b1deaf7e883029
 Last Accepted Stable Baseline: Engineering Foundation / ffdfe3de10c87e50afc3d69017b1deaf7e883029
-Current Candidate: none
-Last Checkpoint: effb57b66d084ce76bda9cdd198395ab8041a12b (prior Engineering Foundation closure/Handoff)
-Working Tree: WP-0 audit/status/governance documents are committed in the final audit documentation commit; no product behavior, schema, or deployment code was changed.
-Runtime Identity: Current local development entrypoint remains `main.py` / `backend.main:app`, intentionally loopback `127.0.0.1:8000`; frontend asset identity remains `0.4.3-generation-navigation-r1`.
-Tests Completed: WP-0 ran deterministic `run_core_tests.py` 34/34 passed, Python compilation, and frontend Node syntax checks. No real Provider/API, deployment, tunnel, public listener, runtime restart, database content read, database mutation, external account, GitHub, remote, or cloud action occurred.
-Tests Pending: No further test is authorized in WP-0. A future approved release track must define its own isolated deployment smoke and release gate.
+Current Candidate: pending local candidate commit
+Last Checkpoint: 818376df2a62eb20b8f0d7f0ad72f195543d0a03 (WP-0 audit documentation)
+Working Tree: WP-1 local code/config/test/docs changes are pending the required candidate and handoff commits. No external state was changed.
+Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
+Tests Completed: WP-1 deterministic core regression, Python compilation, frontend Node syntax, diff whitespace check, and Preview isolation/config/provider/surface tests passed. No real Provider/API, deployment, tunnel, public listener, runtime restart, local database content read, external account, GitHub, remote, or cloud action occurred.
+Tests Pending: Tech Lead review and a future authorized WP-2 isolated-runtime/data/secret implementation; no external deployment smoke is authorized in WP-1.
+
+## WP-1 Delivery
+
+- Local behavior stays the default and retains the accepted SQLite path, loopback bind, Terra Registry/App Server behavior, and data semantics.
+- Preview requires explicit environment configuration and rejects the Product Owner local data directory or an absent release identity.
+- Preview creates an opaque HttpOnly session cookie server-side for API callers. Each active Preview session receives its own SQLite file below the configured Preview-owned data directory; no cookie maps to an existing session unless issued by the current process. The session directory is cleared at Preview startup, so state is non-persistent across process starts.
+- Request-scoped SQLite routing prevents one Preview session from listing, reading, or mutating another session's Conversation state. Existing local SQLite is not initialized or selected in Preview mode.
+- Preview closes `/docs`, `/redoc`, and `/openapi.json`; no backup/import/export or file-byte endpoint exists in the current API.
+- Preview Registry policy is generic but WP-1 validates a DeepSeek-only allowlist. Terra is reported unavailable without a Terra health check or App Server startup; normal local Terra behavior remains unchanged.
+- Future deployment identity is supplied by `XIAOG_RELEASE_ID`; `/health` reports commit, runtime mode, and release identity. Rollback must select the prior immutable revision and its isolated Preview configuration.
 
 ## WP-0 Readiness Conclusion
 
@@ -46,4 +57,4 @@ In the Product Owner's real default Edge environment, while Conversation A is pr
 - No GitHub remote is configured. No GitHub authentication/repository/remote/push, hosting project, DNS, cloud database/storage, external secret, tunnel, or external access was created or authorized.
 - DeepSeek Registry maintenance remains backlog only and was not implemented.
 - No Worker, Controlled Dual-Codex, Phase 5.5, Phase 6+, or deployment was started.
-- Exact next action: Tech Lead and Product Owner decide whether Preview v1 may be ephemeral or requires persistent per-user data, and separately decide Terra inclusion. Only then may they issue a new bounded Activation and the necessary point-in-time external-service authorization.
+- Exact next action: Tech Lead reviews WP-1 and decides whether to issue a bounded WP-2 Activation for an isolated runtime/data/secret boundary. Do not create hosting, GitHub, remote, DNS, external secrets, invited access, or Terra integration without the later point-in-time authorization and Activation.

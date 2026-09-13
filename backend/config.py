@@ -17,14 +17,50 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
 
+def _path_from_env(name: str, default: Path) -> Path:
+    raw = os.getenv(name, "").strip()
+    return Path(raw).expanduser().resolve() if raw else default.resolve()
+
+
+def _runtime_mode() -> str:
+    return os.getenv("XIAOG_RUNTIME_MODE", "local").strip().lower() or "local"
+
+
 @dataclass(frozen=True)
 class RuntimeConfig:
-    """Local development/runtime paths and non-secret process behavior."""
+    """Runtime identity and paths. Preview is explicit and opt-in only."""
 
     project_root: Path = PROJECT_ROOT
-    database_path: Path = PROJECT_ROOT / "data" / "xiaog.db"
-    log_dir: Path = PROJECT_ROOT / "data" / "logs"
+    runtime_mode: str = field(default_factory=_runtime_mode)
+    host: str = field(default_factory=lambda: os.getenv("XIAOG_HOST", "127.0.0.1").strip() or "127.0.0.1")
+    port: int = field(default_factory=lambda: int(os.getenv("XIAOG_PORT", "8000")))
+    data_dir: Path = field(default_factory=lambda: _path_from_env("XIAOG_DATA_DIR", PROJECT_ROOT / "data"))
+    database_path: Path = field(default_factory=lambda: _path_from_env("XIAOG_DATABASE_PATH", _path_from_env("XIAOG_DATA_DIR", PROJECT_ROOT / "data") / "xiaog.db"))
+    log_dir: Path = field(default_factory=lambda: _path_from_env("XIAOG_LOG_DIR", _path_from_env("XIAOG_DATA_DIR", PROJECT_ROOT / "data") / "logs"))
     log_level: str = os.getenv("LOG_LEVEL", "INFO").upper()
+    release_id: str = field(default_factory=lambda: os.getenv("XIAOG_RELEASE_ID", "local-development").strip() or "local-development")
+    preview_provider_allowlist: tuple[str, ...] = field(
+        default_factory=lambda: tuple(item.strip() for item in os.getenv("XIAOG_PREVIEW_PROVIDER_ALLOWLIST", "deepseek").split(",") if item.strip())
+    )
+
+    def __post_init__(self) -> None:
+        if self.runtime_mode not in {"local", "preview"}:
+            raise ValueError("XIAOG_RUNTIME_MODE must be 'local' or 'preview'.")
+        if not 1 <= self.port <= 65535:
+            raise ValueError("XIAOG_PORT must be between 1 and 65535.")
+        if self.runtime_mode == "preview":
+            if not os.getenv("XIAOG_DATA_DIR", "").strip():
+                raise ValueError("Preview mode requires an explicit XIAOG_DATA_DIR.")
+            if self.data_dir == (PROJECT_ROOT / "data").resolve():
+                raise ValueError("Preview mode must not use XiaoG's local data directory.")
+            if self.release_id == "local-development":
+                raise ValueError("Preview mode requires an explicit XIAOG_RELEASE_ID.")
+            if set(self.preview_provider_allowlist) != {"deepseek"}:
+                raise ValueError("WP-1 Preview permits only the DeepSeek provider allowlist.")
+
+    @property
+    def preview_enabled(self) -> bool:
+        return self.runtime_mode == "preview"
 
 
 @dataclass(frozen=True)
@@ -85,9 +121,14 @@ def configuration_summary(active: Settings = None) -> dict[str, object]:
     return {
         "runtime": {
             "project_root": str(current.project_root),
+            "runtime_mode": current.runtime.runtime_mode,
+            "host": current.runtime.host,
+            "port": current.runtime.port,
+            "data_dir": str(current.runtime.data_dir),
             "database_path": str(current.database_path),
             "log_dir": str(current.log_dir),
             "log_level": current.log_level,
+            "release_id": current.runtime.release_id,
         },
         "provider_configuration": {
             "deepseek_base_url": current.deepseek_base_url,
