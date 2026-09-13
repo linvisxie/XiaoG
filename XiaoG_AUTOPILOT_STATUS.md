@@ -8,22 +8,22 @@ Autopilot State: RUNNING
 MILESTONE: PHASE_5_STABLE_REACHED
 Window Start: 2026-09-12 Asia/Shanghai
 Window Stop Gate: Engineering Foundation candidate accepted by the Product Owner
-Current Stage: Engineering Foundation Gate / Batch B in progress (10.6 through 10.8 complete)
-Current Task: Batch B File / Artifact Lifecycle is complete; Provider Health / Fallback / Degradation (10.9) is the next authorized item.
+Current Stage: Engineering Foundation Gate / Batch B in progress (10.6 through 10.9 complete)
+Current Task: Batch B Provider Health / Fallback / Degradation is complete; Backup / Import / Export (10.10) is the next authorized item.
 Current Branch: main
 Start Accepted Baseline: v0.4.0 / 7ddab006a618ede56e3d22d55ba2f212d8f47cd0
 Last Accepted Stable Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7
 Current Candidate: none; Engineering Foundation Batch B is in progress and is not ready for a Candidate.
-Last Checkpoint: a66be31 - Batch B 10.8 File / Artifact Lifecycle metadata boundary complete; 10.9 remains next.
+Last Checkpoint: 068e0b8 - Batch B 10.9 Provider Health / Fallback / Degradation boundary complete; 10.10 remains next.
 Working Tree: Candidate implementation is committed; expected clean after this status-only commit.
 Runtime Identity: XiaoG backend is healthy on 127.0.0.1:8000 as Python listener PID 24180 launched from D:/XiaoG/.venv/Scripts/python.exe main.py; Batch A code is active after restart.
 Tests Completed: Phase 5 Stable matrix retained. Engineering Foundation Batch A: run_core_tests.py deterministic local suite 20/20 passed; covers API contracts, safe DB migration history/idempotence, Conversation lifecycle, Search, Settings, Provider/Model Registry contracts, Auto Router, Phase 5 state regressions, Provider action contracts, diagnostics secret redaction, unified error contract, and configuration secret boundaries. Python compileall, frontend Node syntax, product JSON and diff checks passed. Live local runtime restart passed: /health and /api/provider-status HTTP 200; Terra and DeepSeek status available; live SQLite migration preserved conversation/message/settings counts 9/124/15, schema_version=003_personalization_defaults, integrity_check=ok, foreign_key_check empty; 404/422 responses expose unified credential-free detail.code/message/retryable/retry_action; startup diagnostics emitted database_initialized without secret marker. No paid Provider request was made.
-Tests Pending: Batch B 10.9 Provider Health / Fallback / Degradation, 10.10 Backup / Import / Export, then final Engineering Foundation regression and Candidate experience gate.
+Tests Pending: Batch B 10.10 Backup / Import / Export, then final Engineering Foundation regression and Candidate experience gate.
 Known Issues: none found in the affected v0.4.3 scope.
 Blockers: none
 Backlog / Future Suggestions: none
 Product Owner Gate: Phase 5 Accepted Stable Baseline remains 78130be. Batch A is an internal recoverability checkpoint and requires no Product Owner experience because no product-visible regression was introduced. Engineering Foundation final Candidate still requires Product Owner Experience.
-Next Allowed Stage: Engineering Foundation Gate / Batch B 10.9 Provider Health / Fallback / Degradation only when context/quota is safe. Phase 5.5, Dual-Codex, Phase 6+, and unauthorized Workers remain prohibited.
+Next Allowed Stage: Engineering Foundation Gate / Batch B 10.10 Backup / Import / Export only when context/quota is safe. Phase 5.5, Dual-Codex, Phase 6+, and unauthorized Workers remain prohibited.
 Worker Status: No Worker is active in this Autopilot Window.
 Roadmap Delta Suggestion: Phase 5 Stable Engineering Addendum accepted by the Product Owner on 2026-09-13: permanent regression coverage for reproducible Product Owner bugs; state-machine-first design for stateful features; Conversation x Manual Model reasoning semantics; combination-path/state-transition regression; Provider action URL/capability/security contracts; quota-efficient local deterministic tests; and staged Local-first, GitHub-on-demand integration.
 Protocol Delta Suggestion: none
@@ -55,4 +55,4 @@ Exact Next Action: Begin Engineering Foundation Batch B at 10.6 Permission Abstr
 - 10.6 Permission Abstraction: complete in `acd3ba1`. `backend.permissions` supplies a local-only, deterministic action boundary: local read/write allow; delete/external action require confirmation; sensitive/non-local deny. It is exposed through the future Tool registry contract only; no Phase 5 route, user data, account model, RBAC, public-cloud behavior, or UI confirmation flow changed. Four targeted regressions passed.
 - 10.7 Unified Search Service Continuation: complete in `6ee8743`. Current Conversation Search is explicitly the only enabled domain and is dispatched by the shared `SearchService`; future File/Knowledge/Memory/Project domains must join it rather than create competing search paths. Two targeted regressions passed.
 - Batch B affected regression after 10.7: `run_core_tests.py` 26/26 passed locally. No external Provider calls were made.
-- 10.8 File / Artifact Lifecycle: complete in `a66be31`. Additive migration 004 records local metadata only (never bytes/uploads) for Temporary Chat Attachment, Artifact, Knowledge File, and Project Asset; each has enforced scope/owner/persistence policy and recoverable deletion. Targeted 2/2 and core 28/28 passed; live SQLite applied 004 with integrity_check=ok and foreign_key_check empty.\n- Exact next action: define 10.9 Provider Health / Fallback / Degradation without changing Phase 5 provider behavior until its ownership and fallback semantics are explicit.
+- 10.8 File / Artifact Lifecycle: complete in `a66be31`. Additive migration 004 records local metadata only (never bytes/uploads) for Temporary Chat Attachment, Artifact, Knowledge File, and Project Asset; each has enforced scope/owner/persistence policy and recoverable deletion. Targeted 2/2 and core 28/28 passed; live SQLite applied 004 with integrity_check=ok and foreign_key_check empty.\n- 10.9 Provider Health / Fallback / Degradation: complete in `068e0b8`. Provider health is centrally classified healthy/degraded/unavailable and published with routing eligibility through the Registry; Auto consumes that snapshot and skips degraded/unavailable choices, while Manual selection remains strict and never silently falls back. Targeted 5/5 and core 30/30 passed locally.\n- Exact next action: define 10.10 Backup / Import / Export with local-only, safe additive data ownership and restore semantics; do not create a Candidate before final regression.
