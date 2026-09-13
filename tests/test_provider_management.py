@@ -37,6 +37,8 @@ class ProviderManagementTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(set(providers), {"deepseek", "terra"})
         self.assertEqual(providers["deepseek"]["status"], "available")
+        self.assertEqual(providers["deepseek"]["health"], "healthy")
+        self.assertTrue(providers["deepseek"]["routing_available"])
         self.assertEqual(providers["deepseek"]["usage_url"], "https://platform.deepseek.com/usage")
         self.assertEqual(providers["deepseek"]["billing_url"], "https://platform.deepseek.com/balance")
         self.assertEqual(providers["deepseek"]["recharge_url"], "https://platform.deepseek.com/top_up")

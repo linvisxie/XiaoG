@@ -52,15 +52,15 @@ class AutoRouter:
 
         terra = models.get("terra")
         deepseek = models.get("deepseek")
-        if score >= 4 and terra and terra.get("availability"):
+        if score >= 4 and terra and terra.get("routing_available", terra.get("availability")):
             effort = cls._effort(terra, "high" if score >= 6 else "medium")
             task_class = "complex_" + (tags[0] if tags else "task")
             key = "terra"
-        elif deepseek and deepseek.get("availability"):
+        elif deepseek and deepseek.get("routing_available", deepseek.get("availability")):
             effort = cls._effort(deepseek, "high" if score >= 3 else "low")
             task_class = "standard_" + (tags[0] if tags else "chat")
             key = "deepseek"
-        elif terra and terra.get("availability"):
+        elif terra and terra.get("routing_available", terra.get("availability")):
             effort = cls._effort(terra, "medium")
             task_class = "fallback_terra"
             key = "terra"

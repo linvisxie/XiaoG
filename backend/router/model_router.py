@@ -30,7 +30,8 @@ class ModelRouter:
 
     async def select_auto(self, content: str, context_characters: int) -> tuple[ModelProvider, str, str | None, dict, dict]:
         states = await self.registry._provider_states()
-        models = {key: self.registry._models_for(key, state)[0] for key, state in states.items()}
+        snapshot = self.registry._snapshot_from_states(states)
+        models = {model["selection_key"]: model for model in snapshot["models"]}
         try:
             decision = AutoRouter.decide(content, context_characters, models)
         except ValueError as exc:

@@ -13,6 +13,7 @@ from typing import Any
 from backend.config import settings
 from backend.providers.base import ModelProvider, ProviderError, ProviderStatus, ReasoningEffortError
 from backend.providers.terra import TERRA_MODEL_ID
+from backend.services.provider_health import provider_health_service
 
 
 @dataclass(frozen=True)
@@ -136,12 +137,19 @@ class ModelRegistry:
         models: list[dict[str, Any]] = []
         for selection_key, definition in self._definitions.items():
             status = states[selection_key]
-            models.extend(self._models_for(selection_key, status))
+            provider_models = self._models_for(selection_key, status)
+            health = provider_health_service.assess(status, any(model["availability"] for model in provider_models))
+            for model in provider_models:
+                model["health"] = health.state
+                model["routing_available"] = bool(model["availability"] and health.routing_available)
+            models.extend(provider_models)
             providers.append({
                 "selection_key": definition.selection_key,
                 "provider_id": definition.provider_id,
                 "display_name": definition.display_name,
                 "status": "available" if status.available else "unavailable",
+                "health": health.state,
+                "routing_available": health.routing_available,
                 "capabilities": list(definition.capabilities),
                 "configuration": dict(definition.configuration),
                 "console_url": definition.console_url,
