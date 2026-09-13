@@ -3,11 +3,13 @@
 Activation: `XIAOG-AUTOPILOT-WEB-PREVIEW-WP4-2026-09-14-V1`  
 State: `HANDOFF_REQUIRED`
 
+GitHub source-control authorization: `XIAOG-WP4-GITHUB-SOURCE-CONTROL-GATE-2026-09-14-V1`.
+
 ## Window
 
 - Start provenance: `main` / `4047fc8d6fe41c09de747720506aa1ec26986673`, clean tree, no remote. The accepted Preview product candidate remains `7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b`.
 - Scope completed: local CI/test-gated release and deployment automation readiness only.
-- Stop gate reached: no external CI execution, source-control remote, registry, hosting, DNS, external secret, Provider, or external access was performed or is authorized.
+- Original local stop gate was reached, then the Product Owner granted the bounded GitHub source-control/CI authorization above. That gate is now complete. No registry, hosting, DNS, external secret, Provider, or external access was performed or is authorized.
 
 ## Delivered
 
@@ -36,7 +38,16 @@ Docker is unavailable on this workstation (`docker` command not found). No local
 
 ## Candidate and Git
 
-WP-4 local readiness candidate: `38455d0cee8c5a572761b5283821dc54f71b6d3e` (`candidate: complete WP-4 local release readiness`). The strict local gate passed on that exact clean commit. The following documentation-only provenance commit records this fact; it contains no product runtime changes.
+The original local candidate `38455d0cee8c5a572761b5283821dc54f71b6d3e` exposed one CI-only quoting defect in the Docker revision-label inspection command. The release gate and image build themselves succeeded; the final `docker image inspect` Go-template contained unnecessary backslashes.
+
+Replacement candidate: `641f5fb360f0f8e6e0cbaf27fbff3182a79d3550` (`fix: correct WP-4 container label check`). This is a one-line workflow-only correction; no product backend, frontend, schema, runtime semantics, provider behavior, or secret handling changed. The full local release gate passed on this commit, then it was non-force pushed to `main`.
+
+GitHub identity and CI evidence:
+
+- Repository: `linvisxie/XiaoG`, Private, `https://github.com/linvisxie/XiaoG`.
+- Remote: `origin` / `https://github.com/linvisxie/XiaoG.git` (fetch and push); local `main` tracks `origin/main`.
+- Initial pushed history reached `7cb2e1ef0a5ede0114057f820505741667b712e2`. Its Actions run `34777920498` failed only at the malformed inspect template; the release gate passed and no artifact was published.
+- Replacement commit `641f5fb360f0f8e6e0cbaf27fbff3182a79d3550` was pushed normally. Actions run `34778077074` succeeded: `release-gate` and `Build local container artifact contract` both passed. No container registry publish, deployment, secret injection, or external access occurred.
 
 ## External gate / minimum Product Owner authorization
 

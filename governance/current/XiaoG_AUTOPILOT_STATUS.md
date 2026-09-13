@@ -13,18 +13,19 @@ MILESTONE: WP_2_ISOLATED_RUNTIME_DATA_SECRET_BOUNDARY_COMPLETE
 MILESTONE: WP_3_INVITED_ACCESS_RATE_COST_ABUSE_BOUNDARY_COMPLETE
 MILESTONE: WP_4_LOCAL_CI_RELEASE_DEPLOYMENT_READINESS_COMPLETE
 Window Start: 2026-09-14 Asia/Shanghai
-Window Stop Gate: WP-4 local CI/release/deployment readiness is complete. Handoff is required before any external CI, deployment, secret, registry, hosting, DNS, or access action.
-Current Stage: WP-4 — CI / Test-Gated Automatic Deployment / Handoff Required
-Current Task: WP-4 local readiness is complete. WP-3 remains Accepted/Closed; no external WP-4 execution is authorized.
+External Authorization: XIAOG-WP4-GITHUB-SOURCE-CONTROL-GATE-2026-09-14-V1 (GitHub private source control and CI only)
+Window Stop Gate: WP-4 local readiness and the authorized GitHub source-control/CI gate are complete. Handoff is required before any hosting, registry, deployment, secret, DNS, or access action.
+Current Stage: WP-4 — CI / Test-Gated Automatic Deployment / GitHub Gate Handoff Required
+Current Task: WP-4 local readiness and the narrowly authorized GitHub private-repository/CI step are complete. WP-3 remains Accepted/Closed; deployment remains unauthorized.
 Current Branch: main
 Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Engineering Foundation product baseline / ffdfe3de10c87e50afc3d69017b1deaf7e883029
 Last Accepted Stable Baseline: WP-3 / 7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b
-Current Candidate: WP-4 local readiness / 38455d0cee8c5a572761b5283821dc54f71b6d3e (strict local gate passed; not an external deployment)
-Last Checkpoint: 38455d0cee8c5a572761b5283821dc54f71b6d3e (WP-4 local readiness candidate)
-Working Tree: clean after final WP-4 governance provenance commit. No external state was changed.
+Current Candidate: WP-4 GitHub-CI-verified readiness / 641f5fb360f0f8e6e0cbaf27fbff3182a79d3550 (replacement candidate; not an external deployment)
+Last Checkpoint: 641f5fb360f0f8e6e0cbaf27fbff3182a79d3550 (WP-4 workflow quoting fix; local gate and GitHub CI passed)
+Working Tree: clean after GitHub-CI-verified candidate. The current STATUS/Handoff update is governance-only; no external deployment state was changed.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
-Tests Completed: `./.venv/Scripts/python.exe tools/ci/wp4_release_gate.py --revision HEAD` passed on `38455d0cee8c5a572761b5283821dc54f71b6d3e`: 44/44 core regression, Preview release smoke, explicit 7-test WP-3 access/streaming suite, Python compile, frontend Node syntax, Git diff/revision/clean-tree checks, and secret scan. All use local/fake dependencies; no Provider call occurred.
-Tests Pending: local Docker build/container smoke was not run because Docker is unavailable. Any remote CI, registry, deployment, secret injection, real Provider check, or external access remains unauthorized.
+Tests Completed: `./.venv/Scripts/python.exe tools/ci/wp4_release_gate.py --revision HEAD` passed on replacement candidate `641f5fb360f0f8e6e0cbaf27fbff3182a79d3550`: 44/44 core regression, Preview release smoke, explicit 7-test WP-3 access/streaming suite, Python compile, frontend Node syntax, Git diff/revision/clean-tree checks, and secret scan. GitHub Actions workflow `XiaoG WP-4 release gate` run `34778077074` passed on that exact commit: its release gate and local container build/revision-label assertion both succeeded. No image was published and no deployment occurred.
+Tests Pending: no further source-control/CI test is pending for the verified candidate. Local Docker remains unavailable; GitHub CI supplied the authorized container build-contract evidence. Any registry, deployment, secret injection, real Provider check, or external access remains unauthorized.
 
 ## WP-1 Delivery
 
@@ -57,7 +58,7 @@ In the Product Owner's real default Edge environment, while Conversation A is pr
 ## Governance and Scope Guard
 
 - Public Preview Addendum is approved roadmap scope; full Phase 9 Cloud, commercialization, open registration, desktop/cloud dual runtime, and unrelated product phases remain out of scope.
-- No GitHub remote is configured. No GitHub authentication/repository/remote/push, hosting project, DNS, cloud database/storage, external secret, tunnel, or external access was created or authorized.
+- Authorized GitHub source-control/CI actions completed: private repository `linvisxie/XiaoG` at `https://github.com/linvisxie/XiaoG`, remote `origin` at `https://github.com/linvisxie/XiaoG.git`, and non-force `main` pushes. GitHub Actions ran only the repository WP-4 release-gate workflow. No hosting project, registry publish, DNS, cloud database/storage, external secret, tunnel, or external access was created or authorized.
 - DeepSeek Registry maintenance remains backlog only and was not implemented.
 - No Worker, Controlled Dual-Codex, Phase 5.5, Phase 6+, or deployment was started.
-- Exact next action: Verify the WP-4 candidate provenance, then Tech Lead reviews WP-4 local readiness and decides whether to grant a point-in-time external-action authorization. GitHub authentication/repository/remote/push, hosting, DNS, external secrets, registry publish, invited external access, real Provider, and Terra must not start automatically.
+- Exact next action: Tech Lead reviews the completed WP-4 local and GitHub source-control/CI evidence and decides whether to grant a separate point-in-time authorization for a named next external step. Hosting, container-registry publish, deployment, DNS, external secrets, invited external access, real Provider, and Terra must not start automatically.
