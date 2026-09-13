@@ -1,5 +1,15 @@
 # 小G / XiaoG v0.1
 
+## 核心回归测试
+
+在项目根目录执行：
+
+```powershell
+.\.venv\Scripts\python.exe .\run_core_tests.py
+```
+
+该命令只运行本地、确定性的核心回归；不会发送真实 Provider 请求，也不会改动 `data/xiaog.db`。
+
 这是一个属于你的个人 AI 助手，而不是某一家模型的聊天网页。小G自己保存人格、用户资料、会话和长期记忆接口；DeepSeek 只是当前接入的第一个“大脑”。
 
 当前版本已完成 Phase 0、1、2、3：本机聊天界面、SQLite 历史会话、统一人格、DeepSeek 官方 API 流式回答、Token/费用记录，以及通过官方 Codex App Server 接入的 GPT-5.6 Terra。
