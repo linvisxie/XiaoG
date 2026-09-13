@@ -13,7 +13,7 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from backend.config import settings
+from backend.config import settings, validate_preview_startup
 from backend.diagnostics import configure_logging, diagnostic_logger, log_event
 from backend.errors import error_detail, normalize_http_detail
 from backend.database.db import active_database_path, initialize_database, use_database_path
@@ -35,6 +35,7 @@ logger = diagnostic_logger('api')
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    validate_preview_startup()
     configure_logging(settings.log_dir, settings.log_level)
     if settings.runtime.preview_enabled:
         preview_sessions.reset_for_startup()

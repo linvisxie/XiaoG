@@ -115,6 +115,16 @@ class Settings:
         return self.provider_secrets.deepseek_api_key
 
 
+def validate_preview_startup(active: Settings | None = None) -> None:
+    """Fail closed for an accidentally incomplete Preview runtime without exposing a secret."""
+    current = active or settings
+    if current.runtime.preview_enabled and not current.deepseek_api_key:
+        raise RuntimeError(
+            "Preview startup blocked: server-side DEEPSEEK_API_KEY is missing. "
+            "Inject it only through the runtime secret environment; no value was logged."
+        )
+
+
 def configuration_summary(active: Settings = None) -> dict[str, object]:
     """Describe ownership boundaries without returning secret values."""
     current = active or settings

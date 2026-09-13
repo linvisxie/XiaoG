@@ -39,11 +39,17 @@ class RedactingFormatter(logging.Formatter):
         safe.msg = redact_text(record.msg)
         if record.args:
             if isinstance(record.args, dict):
-                safe.args = {key: redact_text(value) for key, value in record.args.items()}
+                safe.args = {key: self._safe_argument(value) for key, value in record.args.items()}
             else:
-                safe.args = tuple(redact_text(value) for value in record.args)
+                safe.args = tuple(self._safe_argument(value) for value in record.args)
         rendered = super().format(safe)
         return redact_text(rendered)
+
+    @staticmethod
+    def _safe_argument(value: object) -> object:
+        # Preserve format-compatible numeric/object arguments used by libraries
+        # such as HTTPX, while still redacting potentially secret-bearing text.
+        return redact_text(value) if isinstance(value, (str, bytes)) else value
 
 
 @dataclass(frozen=True)
