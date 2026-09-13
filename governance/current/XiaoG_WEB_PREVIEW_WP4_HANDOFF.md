@@ -36,7 +36,7 @@ Docker is unavailable on this workstation (`docker` command not found). No local
 
 ## Candidate and Git
 
-The WP-4 local readiness candidate is created by the accompanying `candidate:` commit. Its exact hash is recorded in STATUS and this Handoff by the following documentation provenance commit after the candidate has passed the strict gate. No product runtime changes occur in that provenance update.
+WP-4 local readiness candidate: `38455d0cee8c5a572761b5283821dc54f71b6d3e` (`candidate: complete WP-4 local release readiness`). The strict local gate passed on that exact clean commit. The following documentation-only provenance commit records this fact; it contains no product runtime changes.
 
 ## External gate / minimum Product Owner authorization
 

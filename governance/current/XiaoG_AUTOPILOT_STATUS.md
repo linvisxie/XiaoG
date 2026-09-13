@@ -19,11 +19,11 @@ Current Task: WP-4 local readiness is complete. WP-3 remains Accepted/Closed; no
 Current Branch: main
 Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Engineering Foundation product baseline / ffdfe3de10c87e50afc3d69017b1deaf7e883029
 Last Accepted Stable Baseline: WP-3 / 7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b
-Current Candidate: pending accompanying WP-4 local readiness candidate commit
-Last Checkpoint: 56748d416a4ae9bbe0f651b3218c15fd22c65147 (WP-4 local release-gate checkpoint; strict gate passed)
-Working Tree: candidate governance update in progress; no external state was changed.
+Current Candidate: WP-4 local readiness / 38455d0cee8c5a572761b5283821dc54f71b6d3e (strict local gate passed; not an external deployment)
+Last Checkpoint: 38455d0cee8c5a572761b5283821dc54f71b6d3e (WP-4 local readiness candidate)
+Working Tree: clean after WP-4 candidate verification; final governance provenance update pending. No external state was changed.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
-Tests Completed: `./.venv/Scripts/python.exe tools/ci/wp4_release_gate.py --revision HEAD` passed on `56748d416a4ae9bbe0f651b3218c15fd22c65147`: 44/44 core regression, Preview release smoke, explicit 7-test WP-3 access/streaming suite, Python compile, frontend Node syntax, Git diff/revision/clean-tree checks, and secret scan. All use local/fake dependencies; no Provider call occurred.
+Tests Completed: `./.venv/Scripts/python.exe tools/ci/wp4_release_gate.py --revision HEAD` passed on `38455d0cee8c5a572761b5283821dc54f71b6d3e`: 44/44 core regression, Preview release smoke, explicit 7-test WP-3 access/streaming suite, Python compile, frontend Node syntax, Git diff/revision/clean-tree checks, and secret scan. All use local/fake dependencies; no Provider call occurred.
 Tests Pending: local Docker build/container smoke was not run because Docker is unavailable. Any remote CI, registry, deployment, secret injection, real Provider check, or external access remains unauthorized.
 
 ## WP-1 Delivery
