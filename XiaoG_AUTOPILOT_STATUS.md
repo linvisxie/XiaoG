@@ -3,57 +3,60 @@
 Protocol Version: v1.4 FINAL
 Activation ID: XIAOG-AUTOPILOT-PHASE5-2026-09-12-V1
 Roadmap Version: XiaoG Master Roadmap v2 (2026-09-12)
-Roadmap Content Hash: 0f971684cae4eee043c113f3195aed461103139c344b3a272d11237d5d1e96f8
-Autopilot State: WAITING_FOR_PRODUCT_OWNER_EXPERIENCE
+Autopilot State: HANDOFF_REQUIRED
 MILESTONE: PHASE_5_STABLE_REACHED
+MILESTONE: ENGINEERING_FOUNDATION_ACCEPTED_STABLE
 Window Start: 2026-09-12 Asia/Shanghai
-Window Stop Gate: Engineering Foundation candidate accepted by the Product Owner
-Current Stage: Engineering Foundation Candidate / Product Owner Experience Gate
-Current Task: Engineering Foundation Batch B and final local regression are complete; wait for Product Owner experience acceptance of the Candidate.
+Window Stop Gate: Engineering Foundation accepted by Product Owner with documented non-blocking Known Issue; Tech Lead handoff required.
+Current Stage: Engineering Foundation Accepted Stable / Handoff Required
+Current Task: Handoff is prepared; stop autonomous progression and transfer to Tech Lead.
 Current Branch: main
 Start Accepted Baseline: v0.4.0 / 7ddab006a618ede56e3d22d55ba2f212d8f47cd0
 Last Accepted Stable Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7
-Current Candidate: Engineering Foundation Candidate / f6cfdc79026829af11b05e7451a4885a0012d66c - replaces rejected 4401aa41445a3e5d412764ccc1c1c43bc75c988c; awaiting Product Owner experience acceptance.
-Last Checkpoint: f6cfdc79026829af11b05e7451a4885a0012d66c - fixes Product Owner navigation during Conversation generation; awaiting experience acceptance.
-Working Tree: Candidate implementation is committed; expected clean after this status-only commit.
-Runtime Identity: XiaoG backend is healthy on 127.0.0.1:8000 as Python listener PID 24180 launched from D:/XiaoG/.venv/Scripts/python.exe main.py; Batch A code is active after restart.
-Tests Completed: Phase 5 Stable matrix retained. Engineering Foundation Batch A: run_core_tests.py deterministic local suite 20/20 passed; covers API contracts, safe DB migration history/idempotence, Conversation lifecycle, Search, Settings, Provider/Model Registry contracts, Auto Router, Phase 5 state regressions, Provider action contracts, diagnostics secret redaction, unified error contract, and configuration secret boundaries. Python compileall, frontend Node syntax, product JSON and diff checks passed. Live local runtime restart passed: /health and /api/provider-status HTTP 200; Terra and DeepSeek status available; live SQLite migration preserved conversation/message/settings counts 9/124/15, schema_version=003_personalization_defaults, integrity_check=ok, foreign_key_check empty; 404/422 responses expose unified credential-free detail.code/message/retryable/retry_action; startup diagnostics emitted database_initialized without secret marker. No paid Provider request was made.
-Tests Pending: Product Owner Experience acceptance only; no further implementation is authorized while this Candidate awaits review.
-Known Issues: none found in the affected v0.4.3 scope.
-Blockers: none
-Backlog / Future Suggestions: none
-Product Owner Gate: Phase 5 Accepted Stable Baseline remains 78130be. Batch A is an internal recoverability checkpoint and requires no Product Owner experience because no product-visible regression was introduced. Engineering Foundation final Candidate still requires Product Owner Experience.
-Next Allowed Stage: WAITING_FOR_PRODUCT_OWNER_EXPERIENCE. Do not enter Phase 5.5, Dual-Codex, Phase 6+, or unauthorized Worker work unless this Candidate is explicitly accepted and the Activation permits it.
-Worker Status: No Worker is active in this Autopilot Window.
-Roadmap Delta Suggestion: Phase 5 Stable Engineering Addendum accepted by the Product Owner on 2026-09-13: permanent regression coverage for reproducible Product Owner bugs; state-machine-first design for stateful features; Conversation x Manual Model reasoning semantics; combination-path/state-transition regression; Provider action URL/capability/security contracts; quota-efficient local deterministic tests; and staged Local-first, GitHub-on-demand integration.
-Protocol Delta Suggestion: none
-GitHub Status: no remote is configured and GitHub CLI is not installed; no authentication or repository authorization was inferred. Creating a private repository, authenticating, adding a remote, or pushing requires explicit Product Owner action/authorization and does not block local XiaoG.
-Exact Next Action: Begin Engineering Foundation Batch B at 10.6 Permission Abstraction; do not enter later Batch B items until its state ownership, persistence, lifecycle, fallback, and API boundary are explicit.
-## Phase 5 Stable Milestone Engineering Addendum
+Engineering Foundation Accepted Product Code Baseline: ffdfe3de10c87e50afc3d69017b1deaf7e883029
+Candidate Provenance: 30bf8078447c962778ee98968b1afe5cd4a2f85c is an ancestor of the accepted Foundation baseline. It was previously presented as a generation-navigation repair candidate, but Product Owner experience did not prove the real default-Edge navigation issue fixed. It is not accepted as a navigation-bug-fix candidate.
+Product Owner Decision: Engineering Foundation is accepted with the Known Issue below as a non-blocking risk acceptance. This is not a claim that the issue is fixed or absent.
 
-- Product Owner Bug -> Permanent Regression Test: every reproducible Product Owner bug should retain a deterministic regression that fails before and passes after the fix; Product Owner effort should focus on product semantics and experience.
-- Stateful Feature = State-Machine-First: define ownership, source of truth, persistence, lifecycle, initialization/hydration, override priority, fallback, cross-scope isolation, and migration/backward compatibility before implementation.
-- Conversation x Manual Model Reasoning: preference ownership is Conversation x Manual Model; initialize from that pair, then the model's system default, then Registry-valid fallback. Never copy the current effort from another model. Auto preserves all Manual preferences and reports dynamic routing only in message metadata.
-- Combination-path Regression: cover state transitions such as A -> B -> A, Manual -> Auto -> Manual, Model A -> Model B -> Model A, History/New Chat both directions, refresh/restart, archive restore, and Settings changes against existing/new Conversations.
-- Provider Action Regression: every displayed usage/billing/recharge/console action must have a non-empty valid official URL, match action_capabilities, remain provider-isolated, hide unsupported actions, use an official billing flow when no stable recharge URL exists, and expose no key/token/Authorization secret.
-- Quota Efficiency: prefer deterministic Python/JS/API/DB/state tests; summarize successful suites and expand failures only; keep real Provider/model/external API tests to the minimum necessary set.
-- Phase 5 Bug Coverage Inventory: retain existing coverage for History -> New Chat isolation, Draft no-empty-history, Auto/Manual reasoning lifecycle, Conversation and Conversation x Model isolation, per-model Settings defaults, Registry reasoning capabilities, persistence, Provider action correctness, and cold-start Provider card rerender. Any suitable remaining gaps belong in Engineering Foundation Automated Test Suite without unrelated refactoring.
-- GitHub Staging: local D:/XiaoG runtime, Git, working tree, and STATUS remain primary truth. Stage 1 permits a private remote and secret scan only with explicit authentication/repository authorization; Stage 2 CI follows Automated Tests; Stage 3 branch/PR/worktree/ownership rules follows Engineering Foundation before any Controlled Dual-Codex setup.
-- Future Handoff Requirement: carry this milestone, regression policy, state semantics, quota-efficiency policy, Provider action contract, GitHub staging, and scope guards into the Engineering Foundation handoff.
-- Scope Guard: no Phase 5.5, 16GB Controlled Dual-Codex, Phase 6+, unauthorized Worker, restored EXE/Installer, Public Cloud, Phase 9 commercialization, or dual desktop/cloud runtime.
-## Engineering Foundation Batch A Checkpoint
+## Known Issue — Navigation delay during generation in real default Edge runtime
 
-- Checkpoint: 4339f7157f289c5d5c5e954d5f21b372771bec9c.
-- 10.1 Automated Test Suite: `run_core_tests.py` provides the concise local deterministic command; 20 tests cover required API, safe migrations, Conversation lifecycle, Search, Settings, Provider/Model Registry, Router, and retained Phase 5 regressions without real Provider calls.
-- 10.2 Logging / Diagnostics: redacted file/console logs and bounded local recent diagnostics exist; API and Router emit low-cardinality events; Authorization/API key/token patterns are redacted by regression test.
-- 10.3 Unified Error Model / Boundary: credential-free `detail` contracts provide code/message/retryable/retry_action across HTTP validation, HTTPException, Provider SSE errors, and unexpected API exceptions while preserving frontend `detail.message` compatibility.
-- 10.4 Database Migration History: `schema_migrations` tracks 001 core schema, 002 Conversation lifecycle/model state, and 003 personalization defaults. The live database upgraded additively with unchanged user row counts and passing integrity checks.
-- 10.5 Unified Configuration: explicit RuntimeConfig, ProviderConfig, ProviderSecrets and safe configuration summary distinguish local .env secrets, SQLite user settings, product_info metadata, and in-memory runtime state; legacy settings properties remain compatible.
+In the Product Owner's real default Edge environment, while Conversation A is processing, thinking, or generating, clicking Conversation B, New Chat, or Settings sometimes does not switch immediately. The clicked destination appears retained and, when A finishes, the UI may jump to the last clicked destination.
 
-## Engineering Foundation Batch B Progress
+- Current workaround: wait for the current response generation to finish before navigating.
+- No data loss, Conversation/message cross-write, database corruption, security issue, or erroneous generation cancellation was observed.
+- Impact: generation-time navigation experience only; accepted by Product Owner as non-blocking for Engineering Foundation.
+- Root cause: currently unknown.
 
-- 10.6 Permission Abstraction: complete in `acd3ba1`. `backend.permissions` supplies a local-only, deterministic action boundary: local read/write allow; delete/external action require confirmation; sensitive/non-local deny. It is exposed through the future Tool registry contract only; no Phase 5 route, user data, account model, RBAC, public-cloud behavior, or UI confirmation flow changed. Four targeted regressions passed.
-- 10.7 Unified Search Service Continuation: complete in `6ee8743`. Current Conversation Search is explicitly the only enabled domain and is dispatched by the shared `SearchService`; future File/Knowledge/Memory/Project domains must join it rather than create competing search paths. Two targeted regressions passed.
-- Batch B affected regression after 10.7: `run_core_tests.py` 26/26 passed locally. No external Provider calls were made.
-- 10.8 File / Artifact Lifecycle: complete in `a66be31`. Additive migration 004 records local metadata only (never bytes/uploads) for Temporary Chat Attachment, Artifact, Knowledge File, and Project Asset; each has enforced scope/owner/persistence policy and recoverable deletion. Targeted 2/2 and core 28/28 passed; live SQLite applied 004 with integrity_check=ok and foreign_key_check empty.\n- 10.9 Provider Health / Fallback / Degradation: complete in `068e0b8`. Provider health is centrally classified healthy/degraded/unavailable and published with routing eligibility through the Registry; Auto consumes that snapshot and skips degraded/unavailable choices, while Manual selection remains strict and never silently falls back. Targeted 5/5 and core 30/30 passed locally.\n- 10.10 Backup / Import / Export: complete in `4401aa4`. Versioned local snapshots export XiaoG-owned Conversation, Settings, Memory, and File/Artifact metadata. Import is transactional, additive-only, skips only identical initialized defaults, and refuses conflicting IDs or setting values without overwriting data. Targeted 2/2 and core 32/32 passed.\n- Final Engineering Foundation regression: Python `compileall` passed; `node --check frontend/app.js` passed; `run_core_tests.py` 32/32 passed; live local SQLite remains schema 004 with integrity_check=ok and foreign_key_check empty. Frontend source was unchanged, so cache version remains `0.4.3-provider-management-r3` with no cache-busting change required.\n- Engineering Foundation Candidate: `4401aa41445a3e5d412764ccc1c1c43bc75c988c`. Product Owner Experience Gate is now required; do not advance automatically.
-- Product Owner regression fix: f6cfdc79026829af11b05e7451a4885a0012d66c scopes one in-flight request to originating Conversation A. Navigation to B/Draft/Settings does not abort it; SSE delta and completion retain A ownership, and A preview rehydrates on return. A second generation remains blocked while one request is active; no Worker or parallel request model was added. Core 34/34 passed; cache version 0.4.3-generation-navigation-r1; SQLite integrity_check=ok, foreign_key_check empty.
+Diagnostic facts, which must not be over-interpreted:
+
+- Isolated real Edge with delayed local mock SSE navigated immediately to B, Settings, and Draft during generation.
+- Navigation also worked during the pre-first-delta window and during high-frequency delta rendering.
+- Real XiaoG ASGI with a local fake Provider returned normal API requests concurrently during a generation.
+- No provable frontend global lock, pending-navigation queue, backend event-loop blocker, or synthetic stale-navigation replay was found.
+- The real default Edge profile did not expose CDP: it ignored remote-debugging arguments. The safety restriction was not bypassed, no profile was copied or cleared, and no real Provider call was made during that capture attempt.
+- Therefore synthetic passes do not prove the real Product Owner issue does not exist, and they do not resolve it.
+
+Reopen investigation if a trace becomes available in the real runtime, frequency rises materially, data/message pollution appears, a wrong generation is cancelled, SQLite/state damage appears, relevant frontend/runtime architecture changes materially, or Product Owner raises priority.
+
+## Final Verification
+
+- `run_core_tests.py`: 34 passed, 0 failures, 0 errors, 0 skipped; deterministic and no real Provider calls.
+- Retained local Edge smoke: passed; isolated dynamic loopback HTTP 200 then DOM click.
+- Retained synthetic generation-navigation E2E: passed; local delayed SSE plus fake Provider verified B/Settings/Draft commit before generation completion, no Draft-created empty conversation, no cross-conversation stream pollution, no synthetic stale navigation replay, and ordinary ASGI API concurrency.
+- Python harness compilation and `node --check frontend/app.js` / `frontend/i18n.js`: passed.
+- SQLite: migration history `001_core_schema` through `004_file_artifact_lifecycle`; `integrity_check=ok`; `foreign_key_check` empty.
+- Security boundary: core regression includes credential redaction and configuration-secret boundary checks; retained harnesses make no Provider call and emit no credential values.
+- Frontend asset identity was not changed by this closeout: `0.4.3-generation-navigation-r1`.
+
+## Test Harness Classification
+
+- Retained: `tests/e2e_playwright_smoke.py` is a bounded, isolated local Edge and HTTP-readiness smoke; it does not call XiaoG APIs or a Provider.
+- Retained: `tests/e2e_generation_navigation.py` is a deterministic local synthetic regression for global generation lock and cross-conversation stream-pollution regressions. Its scope explicitly excludes the unresolved real default-Edge Known Issue.
+- Removed: `tests/e2e_trace.py` was one-time trace/debug infrastructure with no long-term regression value.
+
+## Handoff and Scope Guard
+
+- Complete handoff: `XiaoG_ENGINEERING_FOUNDATION_HANDOFF.md`.
+- GitHub: no remote is configured and no GitHub authentication, repository creation, or push was performed or authorized.
+- Backlog only, not implemented: DeepSeek Registry maintenance from `deepseek-v4-flash` to official `deepseek-flash`, display name `DeepSeek V4.1 Flash`, official capability verification, retired model handling, and safe additive/backward-compatible preservation of existing Settings, Conversations, and per-model reasoning preferences.
+- Next allowed state: HANDOFF_REQUIRED only. Do not autonomously begin Phase 5.5, Controlled Dual-Codex, Phase 6+, Workers, DeepSeek Registry maintenance, or GitHub work.
+- Exact next action: Tech Lead reviews and accepts the handoff before authorizing any new scope.
