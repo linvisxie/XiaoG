@@ -4,26 +4,26 @@ Protocol Version: v1.4 FINAL
 Activation ID: XIAOG-AUTOPILOT-PHASE5-2026-09-12-V1
 Roadmap Version: XiaoG Master Roadmap v2 (2026-09-12)
 Roadmap Content Hash: 0f971684cae4eee043c113f3195aed461103139c344b3a272d11237d5d1e96f8
-Autopilot State: RUNNING
+Autopilot State: WAITING_FOR_PRODUCT_OWNER_EXPERIENCE
 Window Start: 2026-09-12 Asia/Shanghai
 Window Stop Gate: Engineering Foundation candidate accepted by the Product Owner
 Current Stage: Phase 5 Stable Baseline
-Current Task: Phase 5 stability verification and Candidate formation after accepted v0.4.3.
+Current Task: Product Owner experience validation of Phase 5 Stability Candidate.
 Current Branch: main
 Start Accepted Baseline: v0.4.0 / 7ddab006a618ede56e3d22d55ba2f212d8f47cd0
 Last Accepted Stable Baseline: v0.4.3 / b04ac40d6084f455cae0f8be08a677652e8f7c48
-Current Candidate: none; Phase 5 Stability Candidate pending verification.
-Last Checkpoint: b04ac40d6084f455cae0f8be08a677652e8f7c48 - v0.4.3 Provider Management accepted by the Product Owner.
+Current Candidate: Phase 5 Stability / 78130be33c53d2c2b3c68e378ccc96cce9a144d7
+Last Checkpoint: Phase 5 Stable matrix passed: API, browser, DB, live provider status, regression, security, git clean, and cache-busting.
 Working Tree: Candidate implementation is committed; expected clean after this status-only commit.
-Runtime Identity: XiaoG backend is healthy on 127.0.0.1:8000 as Python listener PID 25096 launched from D:/XiaoG/.venv/Scripts/python.exe main.py; Candidate b04ac40d6084f455cae0f8be08a677652e8f7c48 code is active.
-Tests Completed: v0.4.2 accepted evidence retained. v0.4.3 targeted and affected regression: unittest 13/13 including Provider action URL/capability contracts and prior Conversation state coverage; Python compileall; Node syntax; git diff check. Live /api/providers confirmed OpenAI Codex recharge and billing route to official API Billing Overview with billing_overview strategy and no secret marker; /api/provider-status HTTP 200; SQLite PRAGMA integrity_check=ok and foreign_key_check empty. Isolated headless Edge cold start plus hard refresh verified both Provider cards, OpenAI console/usage/billing/recharge links, DeepSeek isolation, safe external-link attributes, and r3 cache-busted style/i18n/app resources. No paid Provider request was made.
-Tests Pending: Phase 5 Stable API, browser, DB, real-provider status, regression, security, git-clean and cache-busting verification.
+Runtime Identity: XiaoG backend is healthy on 127.0.0.1:8000 as Python listener PID 25096 launched from D:/XiaoG/.venv/Scripts/python.exe main.py; Phase 5 Candidate 78130be33c53d2c2b3c68e378ccc96cce9a144d7 has no runtime-code delta from accepted v0.4.3 baseline b04ac40.
+Tests Completed: Phase 5 Stable matrix passed. unittest 13/13: Conversation lifecycle/model-state, Draft no-empty-history, Auto/Manual routing, per-model reasoning, legacy compatibility, Provider Registry metadata/API and action-capability contracts. Python compileall, frontend Node syntax, product JSON and diff checks passed. Live /api/provider-status HTTP 200: Terra verified by official Codex App Server; Registry contains two Providers with no secret marker. SQLite PRAGMA integrity_check=ok and foreign_key_check empty. Isolated headless Edge verified Settings > Models & Intelligence > Provider Management for both Provider cards, official and separated action URLs, safe target/rel, no displayed secret, and all r3 cache-busted assets. No paid Provider request was made.
+Tests Pending: Product Owner hands-on experience validation of the Phase 5 Stability Candidate only.
 Known Issues: none found in the affected v0.4.3 scope.
 Blockers: none
 Backlog / Future Suggestions: none
-Product Owner Gate: v0.4.3 Candidate b04ac40d6084f455cae0f8be08a677652e8f7c48 was accepted by the Product Owner and is now the accepted Stable Baseline. Phase 5 Stable still requires its own verification and Candidate → Product Owner Experience Gate. Do not enter Engineering Foundation until Phase 5 Stability Candidate is accepted.
-Next Allowed Stage: Phase 5 Stable Baseline verification and Candidate only.
+Product Owner Gate: v0.4.3 / b04ac40 is accepted Stable. Phase 5 Stability Candidate 78130be33c53d2c2b3c68e378ccc96cce9a144d7 is awaiting Product Owner experience validation and is not yet accepted as Stable. Do not enter Engineering Foundation until this Candidate is explicitly accepted.
+Next Allowed Stage: Phase 5 Stable acceptance only; Engineering Foundation remains gated.
 Worker Status: No Worker is active in this Autopilot Window.
 Roadmap Delta Suggestion: none
 Protocol Delta Suggestion: none
-Exact Next Action: Run the Phase 5 Stable verification matrix, form a Phase 5 Stability Candidate if it passes, then wait for Product Owner experience acceptance.
+Exact Next Action: Product Owner validates Phase 5 Stability Candidate 78130be33c53d2c2b3c68e378ccc96cce9a144d7 against normal XiaoG chat, Conversation-scoped model/reasoning state, Provider Management links, refresh persistence, and no exposed secrets; remain waiting until explicit acceptance.
