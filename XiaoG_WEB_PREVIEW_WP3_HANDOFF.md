@@ -13,9 +13,10 @@ State: `HANDOFF_REQUIRED`
 
 ## Verification
 
-- Core regression: 37 passed.
-- WP-2 ASGI release smoke: passed using a fake local invite credential and no Provider request.
+- `./.venv/Scripts/python.exe run_core_tests.py`: 37 passed, 0 failures/errors. Existing coverage includes WP-1 transient-session isolation and diagnostics credential redaction; it is not a dedicated WP-3 invite/quota suite.
+- `./.venv/Scripts/python.exe tests/preview_release_smoke.py`: passed. It verifies a valid fake invite exchange, Secure cookie issuance, and authenticated Conversation creation with no Provider request.
 - Python/Node syntax and `git diff --check`: passed.
+- No existing deterministic WP-3 test evidence was found for invalid invite rejection, failed authentication creating no DB, invite/session binding, cross-invite isolation, per-invite/global rate or concurrency limits, guard-before-Provider behavior, counter release after stream outcomes, or logout invalidation. These are implementation claims not verified test evidence in this closeout.
 - No real Provider, invite distribution, external secret, hosting, remote, DNS, tunnel, or external access occurred. Terra remains disabled in Preview.
 
 ## Remaining blockers
