@@ -9,6 +9,7 @@
 - Current STATUS: `governance/current/XiaoG_AUTOPILOT_STATUS.md`
 - Current WP-4 Activation: `governance/current/XiaoG_Autopilot_Activation_Web_Preview_WP4_v1_2026-09-14.md`
 - Current WP-4 Plan: `governance/current/XiaoG_WEB_PREVIEW_WP4_PLAN_2026-09-14.md`
+- Current WP-4 Handoff: `governance/current/XiaoG_WEB_PREVIEW_WP4_HANDOFF.md`
 
 Archives: `governance/archive/wp0`, `wp1`, `wp2`, `wp3`; Foundation: `governance/archive/foundation`.
 
