@@ -11,14 +11,14 @@ MILESTONE: WP_0_WEB_PREVIEW_READINESS_AUDIT_COMPLETE
 MILESTONE: WP_1_RELEASE_BASELINE_AND_SAFE_EPHEMERAL_PREVIEW_MODE_COMPLETE
 MILESTONE: WP_2_ISOLATED_RUNTIME_DATA_SECRET_BOUNDARY_COMPLETE
 Window Start: 2026-09-14 Asia/Shanghai
-Window Stop Gate: WP-1 local release baseline and safe ephemeral Preview mode delivered; Tech Lead review is required before WP-2.
+Window Stop Gate: WP-2 local isolated runtime/data/secret boundary is complete; await Tech Lead final governance acceptance and next-stage decision.
 Current Stage: WP-2 Isolated Runtime / Data / Secret Boundary / Handoff Required
 Current Task: WP-2 local release contract and deterministic smoke are complete. Stop autonomous progression and hand off for Tech Lead review.
 Current Branch: main
 Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Engineering Foundation product baseline / ffdfe3de10c87e50afc3d69017b1deaf7e883029
 Last Accepted Stable Baseline: Engineering Foundation / ffdfe3de10c87e50afc3d69017b1deaf7e883029
 Current Candidate: WP-2 local candidate / da5bb6c27ab3c33b7275eac8e686b16c53e057ad
-Last Checkpoint: 12a3ed352b0af3db1f611babcb1d295fd0982114 (WP-1 candidate)
+Last Checkpoint: da5bb6c27ab3c33b7275eac8e686b16c53e057ad (WP-2 candidate: preview runtime release contract)
 Working Tree: clean after the final local WP-2 status commit; no external state was changed.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
 Tests Completed: WP-2 release smoke passed with ASGI/fake-local dependencies; core regression 37/37 passed; Python compilation, frontend syntax, and diff whitespace check passed. No real Provider/API, deployment, tunnel, public listener, external account, GitHub, remote, or cloud action occurred.
@@ -58,4 +58,4 @@ In the Product Owner's real default Edge environment, while Conversation A is pr
 - No GitHub remote is configured. No GitHub authentication/repository/remote/push, hosting project, DNS, cloud database/storage, external secret, tunnel, or external access was created or authorized.
 - DeepSeek Registry maintenance remains backlog only and was not implemented.
 - No Worker, Controlled Dual-Codex, Phase 5.5, Phase 6+, or deployment was started.
-- Exact next action: Tech Lead reviews WP-1 and decides whether to issue a bounded WP-2 Activation for an isolated runtime/data/secret boundary. Do not create hosting, GitHub, remote, DNS, external secrets, invited access, or Terra integration without the later point-in-time authorization and Activation.
+- Exact next action: Tech Lead reviews WP-2 and decides whether to authorize the next Preview step. WP-3, GitHub, hosting, DNS, external secrets, invited external access, and Terra must not start automatically.
