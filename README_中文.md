@@ -10,6 +10,13 @@
 
 该命令只运行本地、确定性的核心回归；不会发送真实 Provider 请求，也不会改动 `data/xiaog.db`。
 
+## 配置边界
+
+- `.env`：本机 Provider secret 与非敏感 Provider/runtime 配置；secret 不会进入接口、产品 metadata 或日志。
+- SQLite `settings` 表：用户设置与个性化偏好。
+- `product_info.json`：公开产品 metadata。
+- 服务进程内存：Codex App Server、Router 等运行时状态，不持久化为 secret 配置。
+
 这是一个属于你的个人 AI 助手，而不是某一家模型的聊天网页。小G自己保存人格、用户资料、会话和长期记忆接口；DeepSeek 只是当前接入的第一个“大脑”。
 
 当前版本已完成 Phase 0、1、2、3：本机聊天界面、SQLite 历史会话、统一人格、DeepSeek 官方 API 流式回答、Token/费用记录，以及通过官方 Codex App Server 接入的 GPT-5.6 Terra。

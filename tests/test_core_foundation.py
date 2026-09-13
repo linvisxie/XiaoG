@@ -12,6 +12,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend import main as api
+from backend.config import configuration_summary
 from backend.database import db as database
 from backend.diagnostics import RecentDiagnosticsHandler, redact_text
 from backend.errors import error_detail, normalize_http_detail
@@ -125,6 +126,13 @@ class CoreFoundationTests(unittest.TestCase):
         self.assertEqual(personalization["theme_mode"], "dark")
         self.assertEqual(searched["results"][0]["conversation_id"], created["id"])
 
+    def test_configuration_summary_separates_ownership_without_secret_values(self) -> None:
+        summary = configuration_summary()
+        self.assertEqual(summary["provider_secrets"], {"source": "local .env", "exposed": False})
+        self.assertEqual(summary["user_settings"]["source"], "SQLite settings table")
+        self.assertEqual(summary["product_metadata"]["source"], "product_info.json")
+        self.assertEqual(summary["runtime_state"]["source"], "in-memory service state")
+        self.assertNotIn("deepseek_api_key", repr(summary).lower())
     def test_error_contract_preserves_message_and_exposes_retry_metadata(self) -> None:
         provider = normalize_http_detail(
             HTTPException(status_code=503, detail={"code": "provider_unavailable", "message": "Provider 暂不可用。"})
