@@ -3,7 +3,7 @@
 Activation: `XIAOG-AUTOPILOT-WEB-PREVIEW-WP3-2026-09-14-V1`  
 State: `HANDOFF_REQUIRED`
 
-WP-3 replacement candidate: `d3210a5e510ce060e4ffe55ca7b53087419467df` (verification patch; replaces `163921c75032da4867cae75935033fd1049e0c3e`).
+WP-3 replacement candidate: `7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b` (streaming verification patch; replaces `d3210a5e510ce060e4ffe55ca7b53087419467df`).
 
 ## Delivered
 
