@@ -18,7 +18,7 @@ WP-3 replacement candidate: `d3210a5e510ce060e4ffe55ca7b53087419467df` (verifica
 - `./.venv/Scripts/python.exe run_core_tests.py`: 41 passed, 0 failures/errors. New `tests/test_preview_access.py` verifies invalid invite rejection with no session DB, invite/session identity binding, cross-invite SQLite non-access, no invite credential in SQLite/redacted text, per-invite/global request quota, per-invite/global generation concurrency, guard rejection before a generation is admitted, direct release of active counters, and logout invalidation.
 - `./.venv/Scripts/python.exe tests/preview_release_smoke.py`: passed. It verifies a valid fake invite exchange, invite ID response binding, Secure/HttpOnly/SameSite/Max-Age cookie attributes, authenticated Conversation creation, then logout and original-cookie 401; no Provider request.
 - Python/Node syntax and `git diff --check`: passed.
-- No independent fake-stream test yet proves counter release through all actual streaming success/error/cancel paths; direct admission/release coverage exists. Do not present that specific stream-outcome coverage as complete.
+- `./.venv/Scripts/python.exe -m unittest tests.test_preview_streaming`: 3 passed. It exercises the actual `chat → StreamingResponse` wrapper with fake Providers: success, Provider error, and client cancellation each release active generation state and permit a later generation admission.
 - No real Provider, invite distribution, external secret, hosting, remote, DNS, tunnel, or external access occurred. Terra remains disabled in Preview.
 
 ## Remaining blockers
