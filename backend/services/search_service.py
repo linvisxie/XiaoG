@@ -2,7 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
+from enum import StrEnum
+
 from backend.database.db import get_connection
+
+
+class SearchDomain(StrEnum):
+    """Domains that are currently implemented by the unified search service."""
+
+    CONVERSATIONS = "conversations"
 
 
 class SearchService:
@@ -13,8 +22,29 @@ class SearchService:
     separate, competing search paths.
     """
 
-    def search(self, query: str, *, limit: int = 50) -> dict[str, list[dict]]:
-        return {"conversations": self.search_conversations(query, limit=limit)}
+    def available_domains(self) -> list[str]:
+        """Expose enabled domains without implying future domains are searchable."""
+
+        return [SearchDomain.CONVERSATIONS]
+
+    def search(
+        self,
+        query: str,
+        *,
+        limit: int = 50,
+        domains: Iterable[SearchDomain] | None = None,
+    ) -> dict[str, list[dict]]:
+        """Search only through this service's explicitly enabled domains.
+
+        Future file, knowledge, memory, and project search must extend this
+        dispatcher rather than create an independent search path.
+        """
+
+        selected_domains = frozenset(domains) if domains is not None else frozenset(SearchDomain)
+        results: dict[str, list[dict]] = {}
+        if SearchDomain.CONVERSATIONS in selected_domains:
+            results[SearchDomain.CONVERSATIONS] = self.search_conversations(query, limit=limit)
+        return results
 
     def search_conversations(self, query: str, *, limit: int = 50) -> list[dict]:
         clean_query = " ".join(query.split())
