@@ -1,10 +1,14 @@
 """Model selection facade for strict Manual and transparent Auto modes."""
 
+from backend.diagnostics import diagnostic_logger, log_event
 from backend.providers.base import ModelProvider, ProviderError
 from backend.providers.deepseek import DeepSeekProvider
 from backend.providers.terra import TerraProvider
 from backend.router.auto_router import AutoRouter
 from backend.services.model_registry import ModelRegistry
+
+
+logger = diagnostic_logger('router')
 
 
 class ModelRouter:
@@ -21,6 +25,7 @@ class ModelRouter:
         selection_key = preference if preference in {"deepseek", "terra"} else "deepseek"
         _status, model, selected_effort = await self.registry.resolve_manual_reasoning(selection_key, reasoning_effort)
         provider = self.terra if selection_key == "terra" else self.deepseek
+        log_event(logger, 20, "manual_model_selected", selection_key=selection_key, reasoning_effort=selected_effort)
         return provider, model["display_name"], selected_effort, model
 
     async def select_auto(self, content: str, context_characters: int) -> tuple[ModelProvider, str, str | None, dict, dict]:
@@ -37,6 +42,7 @@ class ModelRouter:
             "selected_effort": effort, "task_class": decision.task_class,
             "routing_time_ms": decision.routing_time_ms, "routing_explanation": decision.routing_explanation,
         }
+        log_event(logger, 20, "auto_model_selected", selection_key=decision.selection_key, task_class=decision.task_class, reasoning_effort=effort)
         return provider, model["display_name"], effort, model, routing
 
     async def status(self) -> dict:

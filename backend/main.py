@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.config import settings
+from backend.diagnostics import configure_logging, diagnostic_logger, log_event
 from backend.database.db import initialize_database
 from backend.database.models import ChatRequest, ConversationCreate, ConversationTitleUpdate, SettingsUpdate, ConversationModelSettingsUpdate
 from backend.database.models import PersonalizationSettingsUpdate
@@ -25,25 +26,19 @@ from backend.services.search_service import search_service
 from backend.services.product_info_service import product_info_service
 
 
-def configure_logging() -> None:
-    settings.log_dir.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(
-        level=getattr(logging, settings.log_level, logging.INFO),
-        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
-        handlers=[logging.FileHandler(settings.log_dir / "xiaog.log", encoding="utf-8"), logging.StreamHandler()],
-    )
+logger = diagnostic_logger('api')
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    configure_logging()
+    configure_logging(settings.log_dir, settings.log_level)
     initialize_database()
-    logging.getLogger(__name__).info("XiaoG database initialized")
+    log_event(logger, 20, "database_initialized")
     try:
         await codex_app_server_manager.start()
     except ProviderError as exc:
         # DeepSeek remains usable if Codex is unavailable at application boot.
-        logging.getLogger(__name__).warning("Codex App Server was not ready at startup: %s", exc)
+        logger.warning("Codex App Server was not ready at startup: %s", exc)
     try:
         yield
     finally:
@@ -343,10 +338,10 @@ async def chat(conversation_id: str, payload: ChatRequest) -> StreamingResponse:
                 conversation_service.add_message(conversation_id, "assistant", answer + "\n\n[已停止生成]", provider_name, actual_model)
             raise
         except ProviderError as exc:
-            logging.getLogger(__name__).warning("Provider request failed: %s", exc)
+            logger.warning("Provider request failed: %s", exc)
             yield event_stream("error", {"message": str(exc)})
         except Exception:
-            logging.getLogger(__name__).exception("Unexpected chat failure")
+            logger.exception("Unexpected chat failure")
             yield event_stream("error", {"message": "小G遇到了意外问题，请稍后重试。"})
 
     return StreamingResponse(generate(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})

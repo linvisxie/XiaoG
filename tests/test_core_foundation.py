@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import sqlite3
 import tempfile
 import unittest
@@ -12,6 +13,7 @@ from unittest.mock import patch
 
 from backend import main as api
 from backend.database import db as database
+from backend.diagnostics import RecentDiagnosticsHandler, redact_text
 from backend.database.models import ConversationCreate, PersonalizationSettingsUpdate, SettingsUpdate
 from backend.router.auto_router import AutoRouter
 from backend.services.conversation_service import ConversationService
@@ -116,6 +118,17 @@ class CoreFoundationTests(unittest.TestCase):
         self.assertEqual(personalization["theme_mode"], "dark")
         self.assertEqual(searched["results"][0]["conversation_id"], created["id"])
 
+    def test_diagnostics_redact_credentials_from_text_and_recent_events(self) -> None:
+        secret = "sk-this-must-not-appear-123456789"
+        safe = redact_text(f"Authorization: Bearer {secret}; api_key={secret}; token={secret}")
+        self.assertNotIn(secret, safe)
+        self.assertIn("[REDACTED]", safe)
+
+        handler = RecentDiagnosticsHandler(limit=2)
+        handler.emit(logging.LogRecord("test", logging.WARNING, __file__, 1, "request failed: %s", (f"Bearer {secret}",), None))
+        event = handler.snapshot()[0]
+        self.assertEqual(event["logger"], "test")
+        self.assertNotIn(secret, event["message"])
     def test_auto_router_is_deterministic_and_uses_available_registry_models(self) -> None:
         models = {
             "deepseek": {
