@@ -89,6 +89,11 @@ async def get_model_registry() -> dict:
     return await model_router.registry.snapshot()
 
 
+@app.get("/api/providers")
+async def get_providers() -> dict:
+    """Provider Management reads the same live, credential-free Registry snapshot."""
+    return await model_router.registry.snapshot()
+
 @app.get("/api/conversations")
 async def list_conversations(archived: bool = False, deleted: bool = False) -> list[dict]:
     return conversation_service.list_conversations(archived=archived, deleted=deleted)

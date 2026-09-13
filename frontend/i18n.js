@@ -15,7 +15,9 @@
     "在每条消息名称旁显示本机时间。":"Show local time beside each message author.","关闭后使用 Ctrl/⌘ + Enter 发送，Enter 换行。":"When off, use Ctrl/⌘ + Enter to send and Enter for a new line.","控制界面过渡、提示和流式光标动画。":"Controls interface transitions, notifications, and the streaming cursor.","本阶段建立统一入口，数据操作能力将在后续独立阶段实现。":"This phase establishes a unified entry. Data operations will arrive in a later phase.","迁移或备份本机 XiaoG 数据":"Migrate or back up local XiaoG data","查看与清理临时缓存":"View and clear temporary cache","管理本机历史搜索索引":"Manage local history search indexes",
     "Startup":"Startup","启动选项将在后续版本提供":"Startup options will be available in a later version","Diagnostics":"Diagnostics","诊断工具将在后续版本提供":"Diagnostics will be available in a later version","图片内容":"Image content","图片展示能力预留":"Image display is reserved","视频内容":"Video content","视频搜索与播放能力将在后续阶段接入":"Video search and playback will be available in a later phase","文件内容":"File content","文件生成与处理能力预留":"File generation and processing are reserved","工具结果":"Tool result","工具执行结果入口预留":"Tool result entry is reserved","预留":"Reserved","当前限制":"Limitations"
   });
-  const originals = new WeakMap();
+  Object.assign(english, {
+    "Provider 管理":"Provider Management","状态、模型与连接配置均来自 XiaoG Provider Registry。账号、密钥和付款仅在 Provider 官方页面管理。":"Status, models, and connection configuration come from the XiaoG Provider Registry. Accounts, secrets, and payments stay on official provider pages.","正在读取 Provider 状态…":"Loading provider status…","可用":"Available","不可用":"Unavailable","当前模型":"Current model","未登记模型":"No registered model","连接配置":"Connection configuration","配置仅在本机管理；不会显示密钥。":"Configuration is managed locally; secrets are never displayed.","查看用量":"View usage","管理账单 / 额度":"Manage billing / credit","充值":"Top up","打开官方控制台":"Open official console","此 Provider 未提供此入口。":"This provider does not offer this entry."
+  });  const originals = new WeakMap();
   let language = "zh-CN";
   const translate = (value) => language === "en" ? (english[value] || value) : value;
   const apply = (root = document.body) => {

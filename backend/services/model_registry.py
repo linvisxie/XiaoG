@@ -41,6 +41,9 @@ class ModelRegistry:
             capabilities=("text", "streaming", "reasoning", "tool_use"),
             configuration={"credential_type": "api_key", "model_id_source": "DEEPSEEK_MODEL_ID"},
             console_url="https://platform.deepseek.com/",
+            usage_url="https://platform.deepseek.com/usage",
+            billing_url="https://platform.deepseek.com/balance",
+            recharge_url="https://platform.deepseek.com/top_up",
         ),
         "terra": ProviderDefinition(
             selection_key="terra",
@@ -48,6 +51,9 @@ class ModelRegistry:
             display_name="OpenAI Codex",
             capabilities=("text", "streaming", "reasoning"),
             configuration={"credential_type": "chatgpt_session", "transport": "official_codex_app_server"},
+            console_url="https://chatgpt.com/",
+            usage_url="https://chatgpt.com/",
+            billing_url="https://help.openai.com/en/articles/9039756-managing-billing-for-chatgpt-and-the-api-platform",
         ),
     }
 

@@ -1,7 +1,7 @@
 {
   "name": "XiaoG",
-  "version": "0.4.2",
-  "phase": "Phase 5 - Auto Router v1",
+  "version": "0.4.3",
+  "phase": "Phase 5 - Provider Management",
   "models": ["DeepSeek V4 Flash", "GPT-5.6 Terra"],
   "capabilities": [
     "对话与流式输出",
@@ -11,6 +11,7 @@
     "DeepSeek V4 Flash 与 GPT-5.6 Terra 的手动模型与推理档位选择",
     "根据 Model Registry 动态生成的 Manual Reasoning 选择器与按模型保存的推理偏好",
     "Auto Router v1：本地规则按任务信号、上下文、模型能力与实时可用状态选择模型和推理档位",
+    "Provider Management：Registry 驱动的状态、模型、连接配置摘要与官方用量、账单、充值、控制台入口",
     "Terra 长期 Codex App Server 与同会话 thread 复用",
     "主题、配色、头像与显示设置",
     "简体中文与 English 软件界面切换",
@@ -26,7 +27,8 @@
     "附件、语音和富媒体卡片目前仅提供界面入口或预留结构"
   ],
   "changelog": [
-    {"version": "0.4.2", "title": "Auto Router v1", "items": ["Auto 使用本地透明规则选择 Provider、Model 与 Reasoning Effort", "路由参考任务复杂度、文本和上下文长度、代码/结构化/推理信号与实时可用状态", "Manual Model + Reasoning 选择始终严格优先；SSE 返回非 CoT 路由元数据"]},
+    {"version": "0.4.3", "title": "Provider Management", "items": ["Settings 中通过 Provider Registry 展示状态、模型和本机连接配置摘要", "官方用量、账单/额度、充值和控制台链接保持 Provider-owned，不在 XiaoG 内部处理支付", "不显示密钥，不改变现有 Provider、App Server、Thread 或路由调用路径"]},
+    {"version": "0.4.3", "title": "Auto Router v1", "items": ["Auto 使用本地透明规则选择 Provider、Model 与 Reasoning Effort", "路由参考任务复杂度、文本和上下文长度、代码/结构化/推理信号与实时可用状态", "Manual Model + Reasoning 选择始终严格优先；SSE 返回非 CoT 路由元数据"]},
     {"version": "0.4.1", "title": "Dynamic manual reasoning", "items": ["推理档位选择器由 Model Registry 的真实能力动态生成", "DeepSeek V4 Flash 支持 None、Low、High、Max；GPT-5.6 Terra 支持 Low、Medium、High、Extra High、Max、Ultra", "每个模型分别保存最近一次手动推理选择；Auto Router 仍未实现"]},
     {"version": "0.4.0", "title": "Provider and model capability registry", "items": ["建立统一 Provider Registry、Model Registry 与 Capability System", "模型显示名和实时可用状态由 Registry 提供", "记录 DeepSeek V4 Flash 与 GPT-5.6 Terra 的真实推理能力元数据，不改变现有 Provider 调用行为"]},
     {"version": "0.3.7.2", "title": "Stabilize header model controls", "items": ["模型标签、选择器、状态、Auto 与 Terra 推理区域使用独立稳定轨道", "切换模型不再改变模型标签或选择器的横向位置"]},

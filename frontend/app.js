@@ -282,7 +282,46 @@ function renderDefaultReasoning() {
   const note = $("#reasoning-model-note");
   if (note) note.textContent = isAuto ? "Auto 不使用手动推理档位；各 Manual 模型已保存的默认偏好会保留。" : model && options.length ? model.display_name + " · " + options.map(reasoningLabel).join(" / ") : "当前默认模型不支持手动推理档位。";
 }
-function renderManualReasoning() {
+function providerManagementLabel(value) { return window.XiaoGI18n?.t(value) || value; }
+function providerManagementLink(label, url) {
+  const href = safeHttpUrl(url);
+  if (!href) return null;
+  const link = document.createElement("a");
+  link.className = "provider-action";
+  link.href = href;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = providerManagementLabel(label);
+  return link;
+}
+function renderProviderManagement() {
+  const target = $("#provider-management-list");
+  if (!target) return;
+  target.replaceChildren();
+  const providers = state.modelRegistry?.providers;
+  if (!Array.isArray(providers) || !providers.length) {
+    const pending = document.createElement("p"); pending.className = "dialog-tip"; pending.textContent = providerManagementLabel("正在读取 Provider 状态…"); target.append(pending); return;
+  }
+  const models = state.modelRegistry?.models || [];
+  for (const provider of providers) {
+    const card = document.createElement("article"); card.className = "provider-card";
+    const heading = document.createElement("div"); heading.className = "provider-card-heading";
+    const name = document.createElement("strong"); name.textContent = provider.display_name || provider.provider_id || "Provider";
+    const status = document.createElement("span"); const isAvailable = provider.status === "available"; status.className = "provider-card-status " + (isAvailable ? "available" : "unavailable"); status.textContent = providerManagementLabel(isAvailable ? "可用" : "不可用");
+    heading.append(name, status); card.append(heading);
+    const providerModels = models.filter((model) => model.selection_key === provider.selection_key).map((model) => model.display_name || model.model_id).filter(Boolean);
+    const modelLine = document.createElement("p"); modelLine.className = "provider-detail"; modelLine.textContent = providerManagementLabel("当前模型") + "：" + (providerModels.join(" · ") || providerManagementLabel("未登记模型")); card.append(modelLine);
+    const config = provider.configuration && typeof provider.configuration === "object" ? Object.entries(provider.configuration).filter(([key, value]) => typeof key === "string" && typeof value === "string") : [];
+    const configLine = document.createElement("p"); configLine.className = "provider-detail"; configLine.textContent = providerManagementLabel("连接配置") + "：" + (config.map(([key, value]) => key + "=" + value).join(" · ") || "—"); card.append(configLine);
+    const note = document.createElement("p"); note.className = "dialog-tip provider-security-note"; note.textContent = providerManagementLabel("配置仅在本机管理；不会显示密钥。"); card.append(note);
+    const actions = document.createElement("div"); actions.className = "provider-actions";
+    for (const [label, url] of [["查看用量", provider.usage_url], ["管理账单 / 额度", provider.billing_url], ["充值", provider.recharge_url], ["打开官方控制台", provider.console_url]]) {
+      const link = providerManagementLink(label, url); if (link) actions.append(link);
+    }
+    if (!actions.childElementCount) { const unavailable = document.createElement("span"); unavailable.className = "dialog-tip"; unavailable.textContent = providerManagementLabel("此 Provider 未提供此入口。"); actions.append(unavailable); }
+    card.append(actions); target.append(card);
+  }
+}function renderManualReasoning() {
   const settings = state.conversationModelSettings;
   const isAuto = !settings || settings.model_mode === "auto" || modelSelect.value === "auto";
   const model = isAuto ? null : selectionModel(settings.manual_model);
@@ -423,6 +462,7 @@ function renderPersonalizationControls() {
   markSelected("#assistant-avatar-options [data-assistant-avatar]", "assistantAvatar", state.personalization.assistant_avatar);
   markSelected("#font-scale-options [data-font-scale]", "fontScale", state.personalization.font_scale);
   renderDefaultReasoning();
+  renderProviderManagement();
   markSelected("#chat-density-options [data-chat-density]", "chatDensity", state.personalization.chat_density);
   const defaultModel = $("#default-model-setting"); if (defaultModel) defaultModel.value = state.personalization.default_model;
   const showTime = $("#show-message-time"); if (showTime) showTime.checked = state.personalization.show_message_time;
