@@ -18,7 +18,7 @@ Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Eng
 Last Accepted Stable Baseline: Engineering Foundation / ffdfe3de10c87e50afc3d69017b1deaf7e883029
 Current Candidate: WP-1 local candidate / 12a3ed352b0af3db1f611babcb1d295fd0982114
 Last Checkpoint: 12a3ed352b0af3db1f611babcb1d295fd0982114 (WP-1 candidate)
-Working Tree: WP-1 candidate is committed. This handoff/status provenance update is pending a final local documentation commit; no external state was changed.
+Working Tree: clean after the final local WP-1 handoff/status commit; no external state was changed.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
 Tests Completed: WP-1 deterministic core regression, Python compilation, frontend Node syntax, diff whitespace check, and Preview isolation/config/provider/surface tests passed. No real Provider/API, deployment, tunnel, public listener, runtime restart, local database content read, external account, GitHub, remote, or cloud action occurred.
 Tests Pending: Tech Lead review and a future authorized WP-2 isolated-runtime/data/secret implementation; no external deployment smoke is authorized in WP-1.
