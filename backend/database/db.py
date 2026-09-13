@@ -1,9 +1,11 @@
-"""SQLite connection and schema initialization for XiaoG-owned data."""
+"""SQLite connection and safe, additive schema migrations for XiaoG-owned data."""
+
+from __future__ import annotations
 
 import sqlite3
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Iterator
 
 from backend.config import settings
 
@@ -11,6 +13,8 @@ from backend.config import settings
 DEFAULT_SYSTEM_PROMPT = """你叫“小G”。
 
 交流原则：自然、诚实、直接、简洁；不刻意讨好用户；能够理解用户，但保持独立判断；发现用户逻辑有问题时可以指出；不知道的事情明确说不知道；不要为了显得聪明而编造事实；不要机械重复用户长期资料。"""
+
+Migration = tuple[str, Callable[[sqlite3.Connection], None]]
 
 
 def now_iso() -> str:
@@ -33,9 +37,9 @@ def get_connection() -> Iterator[sqlite3.Connection]:
         connection.close()
 
 
-def initialize_database() -> None:
-    with get_connection() as conn:
-        conn.executescript("""
+def _migrate_core_schema(conn: sqlite3.Connection) -> None:
+    conn.executescript(
+        """
         CREATE TABLE IF NOT EXISTS conversations (
             id TEXT PRIMARY KEY,
             title TEXT NOT NULL,
@@ -84,66 +88,101 @@ def initialize_database() -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_messages_conversation_created ON messages(conversation_id, created_at);
         CREATE INDEX IF NOT EXISTS idx_usage_conversation_created ON model_usage(conversation_id, created_at);
-        """)
-        # Additive migration: never recreate or clear the user's SQLite database.
-        conversation_columns = {row["name"] for row in conn.execute("PRAGMA table_info(conversations)").fetchall()}
-        if "archived_at" not in conversation_columns:
-            conn.execute("ALTER TABLE conversations ADD COLUMN archived_at TEXT")
-        if "codex_thread_id" not in conversation_columns:
-            conn.execute("ALTER TABLE conversations ADD COLUMN codex_thread_id TEXT")
-        if "codex_last_synced_message_id" not in conversation_columns:
-            conn.execute("ALTER TABLE conversations ADD COLUMN codex_last_synced_message_id TEXT")
-        if "is_pinned" not in conversation_columns:
-            conn.execute("ALTER TABLE conversations ADD COLUMN is_pinned INTEGER NOT NULL DEFAULT 0")
-        if "pinned_at" not in conversation_columns:
-            conn.execute("ALTER TABLE conversations ADD COLUMN pinned_at TEXT")
-        if "deleted_at" not in conversation_columns:
-            conn.execute("ALTER TABLE conversations ADD COLUMN deleted_at TEXT")
-        if "deleted_from" not in conversation_columns:
-            conn.execute("ALTER TABLE conversations ADD COLUMN deleted_from TEXT")
-        if "model_mode" not in conversation_columns:
-            conn.execute("ALTER TABLE conversations ADD COLUMN model_mode TEXT NOT NULL DEFAULT 'auto'" )
-        if "manual_model" not in conversation_columns:
-            conn.execute("ALTER TABLE conversations ADD COLUMN manual_model TEXT NOT NULL DEFAULT 'deepseek'" )
-        if "manual_reasoning_effort" not in conversation_columns:
-            conn.execute("ALTER TABLE conversations ADD COLUMN manual_reasoning_effort TEXT" )
-        if "manual_reasoning_preferences" not in conversation_columns:
-            # Safe additive migration: keep per-model Manual effort without touching rows.
-            conn.execute("ALTER TABLE conversations ADD COLUMN manual_reasoning_preferences TEXT" )
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_archived_updated ON conversations(archived_at, updated_at DESC)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_state ON conversations(deleted_at, archived_at, is_pinned DESC, pinned_at DESC, updated_at DESC)")
+        """
+    )
+
+
+def _ensure_conversation_column(conn: sqlite3.Connection, name: str, definition: str) -> None:
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(conversations)").fetchall()}
+    if name not in columns:
+        conn.execute(f"ALTER TABLE conversations ADD COLUMN {definition}")
+
+
+def _migrate_conversation_lifecycle(conn: sqlite3.Connection) -> None:
+    # Every change is additive: existing rows and SQLite files are retained.
+    for name, definition in (
+        ("archived_at", "archived_at TEXT"),
+        ("codex_thread_id", "codex_thread_id TEXT"),
+        ("codex_last_synced_message_id", "codex_last_synced_message_id TEXT"),
+        ("is_pinned", "is_pinned INTEGER NOT NULL DEFAULT 0"),
+        ("pinned_at", "pinned_at TEXT"),
+        ("deleted_at", "deleted_at TEXT"),
+        ("deleted_from", "deleted_from TEXT"),
+        ("model_mode", "model_mode TEXT NOT NULL DEFAULT 'auto'"),
+        ("manual_model", "manual_model TEXT NOT NULL DEFAULT 'deepseek'"),
+        ("manual_reasoning_effort", "manual_reasoning_effort TEXT"),
+        # Do not populate this JSON map from a legacy scalar. Hydration assigns
+        # the scalar only to its recorded Manual model at read time.
+        ("manual_reasoning_preferences", "manual_reasoning_preferences TEXT"),
+    ):
+        _ensure_conversation_column(conn, name, definition)
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_conversations_archived_updated ON conversations(archived_at, updated_at DESC)")
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_conversations_state "
+        "ON conversations(deleted_at, archived_at, is_pinned DESC, pinned_at DESC, updated_at DESC)"
+    )
+
+
+def _migrate_settings_defaults(conn: sqlite3.Connection) -> None:
+    defaults = (
+        ("system_prompt", DEFAULT_SYSTEM_PROMPT),
+        ("user_profile", ""),
+        ("theme_mode", "light"),
+        ("color_scheme", "green"),
+        ("assistant_avatar", "default"),
+        ("user_avatar", "default"),
+        ("font_scale", "standard"),
+        ("default_model", "deepseek"),
+        ("reasoning_preference", "balanced"),
+        ("manual_reasoning_preferences", "{}"),
+        ("chat_density", "comfortable"),
+        ("show_message_time", "true"),
+        ("enter_to_send", "true"),
+        ("animations_enabled", "true"),
+        ("ui_language", "zh-CN"),
+    )
+    for key, value in defaults:
         conn.execute(
             "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
-            ("system_prompt", DEFAULT_SYSTEM_PROMPT, now_iso()),
+            (key, value, now_iso()),
         )
+
+
+MIGRATIONS: tuple[Migration, ...] = (
+    ("001_core_schema", _migrate_core_schema),
+    ("002_conversation_lifecycle", _migrate_conversation_lifecycle),
+    ("003_personalization_defaults", _migrate_settings_defaults),
+)
+
+
+def _apply_migration(conn: sqlite3.Connection, version: str, operation: Callable[[sqlite3.Connection], None]) -> None:
+    applied = conn.execute("SELECT 1 FROM schema_migrations WHERE version = ?", (version,)).fetchone()
+    if applied:
+        return
+    operation(conn)
+    conn.execute(
+        "INSERT INTO schema_migrations(version, applied_at) VALUES (?, ?)",
+        (version, now_iso()),
+    )
+
+
+def initialize_database() -> None:
+    """Apply all ordered, additive migrations in one SQLite transaction."""
+    with get_connection() as conn:
         conn.execute(
-            "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
-            ("user_profile", "", now_iso()),
+            "CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
         )
-        # Additive defaults for the extensible, local user-preferences store.
-        # Existing databases keep all settings and conversation data intact.
-        conn.execute(
-            "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
-            ("theme_mode", "light", now_iso()),
-        )
-        conn.execute(
-            "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
-            ("color_scheme", "green", now_iso()),
-        )
-        for key, value in (
-            ("assistant_avatar", "default"),
-            ("user_avatar", "default"),
-            ("font_scale", "standard"),
-            ("default_model", "deepseek"),
-            ("reasoning_preference", "balanced"),
-            ("manual_reasoning_preferences", "{}"),
-            ("chat_density", "comfortable"),
-            ("show_message_time", "true"),
-            ("enter_to_send", "true"),
-            ("animations_enabled", "true"),
-            ("ui_language", "zh-CN"),
-        ):
-            conn.execute(
-                "INSERT OR IGNORE INTO settings(key, value, updated_at) VALUES (?, ?, ?)",
-                (key, value, now_iso()),
-            )
+        for version, operation in MIGRATIONS:
+            _apply_migration(conn, version, operation)
+
+
+def schema_version() -> str | None:
+    """Return the latest applied additive migration, if the database is initialized."""
+    history = migration_history()
+    return history[-1]["version"] if history else None
+
+def migration_history() -> list[dict[str, str]]:
+    """Expose applied migration metadata without exposing application data."""
+    with get_connection() as conn:
+        rows = conn.execute("SELECT version, applied_at FROM schema_migrations ORDER BY version").fetchall()
+    return [dict(row) for row in rows]

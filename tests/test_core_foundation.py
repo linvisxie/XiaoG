@@ -67,6 +67,11 @@ class CoreFoundationTests(unittest.TestCase):
             connection.close()
         self.assertEqual(row, ("legacy-1", "保留的历史会话"))
         self.assertTrue({"archived_at", "deleted_at", "model_mode", "manual_reasoning_preferences"}.issubset(columns))
+        expected_history = ["001_core_schema", "002_conversation_lifecycle", "003_personalization_defaults"]
+        self.assertEqual([item["version"] for item in database.migration_history()], expected_history)
+        self.assertEqual(database.schema_version(), "003_personalization_defaults")
+        database.initialize_database()
+        self.assertEqual([item["version"] for item in database.migration_history()], expected_history)
 
     def test_conversation_lifecycle_search_and_settings_contracts(self) -> None:
         conversation = self.service.create_conversation("百分号 100%_会话")
