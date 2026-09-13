@@ -27,7 +27,7 @@ jobs:
       - name: Build local container artifact contract
         run: |
           docker build --build-arg XIAOG_SOURCE_REVISION="$GITHUB_SHA" --tag "xiaog-preview:$GITHUB_SHA" .
-          test "$(docker image inspect --format '{{ index .Config.Labels \"org.opencontainers.image.revision\" }}' "xiaog-preview:$GITHUB_SHA")" = "$GITHUB_SHA"
+          test "$(docker image inspect --format '{{ index .Config.Labels "org.opencontainers.image.revision" }}' "xiaog-preview:$GITHUB_SHA")" = "$GITHUB_SHA"
 
 # This definition intentionally has no deployment, registry, credential, or external-access job.
 # Those actions require a separate point-in-time Product Owner authorization.
