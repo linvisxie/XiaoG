@@ -148,10 +148,34 @@ def _migrate_settings_defaults(conn: sqlite3.Connection) -> None:
         )
 
 
+
+def _migrate_file_artifact_lifecycle(conn: sqlite3.Connection) -> None:
+    """Add metadata only; XiaoG does not accept or store file bytes yet."""
+    conn.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS file_artifacts (
+            id TEXT PRIMARY KEY,
+            kind TEXT NOT NULL CHECK(kind IN ('temporary_chat_attachment', 'artifact', 'knowledge_file', 'project_asset')),
+            scope TEXT NOT NULL CHECK(scope IN ('conversation', 'project', 'global')),
+            persistence TEXT NOT NULL CHECK(persistence IN ('temporary', 'durable')),
+            display_name TEXT NOT NULL,
+            owner_conversation_id TEXT,
+            owner_project_id TEXT,
+            storage_reference TEXT,
+            deleted_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_file_artifacts_lifecycle
+            ON file_artifacts(deleted_at, kind, scope, updated_at DESC);
+        """
+    )
+
 MIGRATIONS: tuple[Migration, ...] = (
     ("001_core_schema", _migrate_core_schema),
     ("002_conversation_lifecycle", _migrate_conversation_lifecycle),
     ("003_personalization_defaults", _migrate_settings_defaults),
+    ("004_file_artifact_lifecycle", _migrate_file_artifact_lifecycle),
 )
 
 
