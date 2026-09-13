@@ -1,5 +1,6 @@
 """Central registry; future tools must be registered here, not directly in providers."""
 
+from backend.permissions import local_permission_policy
 from backend.tools.base import Tool
 
 
@@ -11,7 +12,22 @@ class ToolRegistry:
         self._tools[tool.name] = tool
 
     def list_definitions(self) -> list[dict]:
-        return [{"name": tool.name, "description": tool.description, "requires_confirmation": tool.requires_confirmation} for tool in self._tools.values()]
+        definitions = []
+        for tool in self._tools.values():
+            request = tool.permission_request()
+            definitions.append(
+                {
+                    "name": tool.name,
+                    "description": tool.description,
+                    "requires_confirmation": tool.requires_confirmation,
+                    "permission": {
+                        "action": request.action,
+                        "scope": request.scope,
+                        **local_permission_policy.evaluate(request).as_dict(),
+                    },
+                }
+            )
+        return definitions
 
 
 tool_registry = ToolRegistry()
