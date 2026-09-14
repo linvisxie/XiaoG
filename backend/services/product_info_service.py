@@ -1,6 +1,8 @@
 """Read only, sanitized XiaoG product status."""
 from __future__ import annotations
 import json
+import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -22,6 +24,9 @@ class ProductInfoService:
         updates = "；".join(f"{item.get('version','')} {item.get('title','')}: {'；'.join(map(str, item.get('items', [])))}" for item in info["changelog"][:3] if isinstance(item, dict))
         return base + f"\n用户正在询问产品状态。权威公开状态：\nCommit：{info['commit']}\n已实现：{capabilities}\n尚未实现/限制：{limitations}\n最近更新：{updates}\n回答应简洁、准确，并明确区分已实现与预留能力。"
     def _git_commit(self) -> str:
+        source_revision = os.environ.get("XIAOG_SOURCE_REVISION", "")
+        if re.fullmatch(r"[0-9a-f]{40}", source_revision):
+            return source_revision
         try:
             result = subprocess.run(["git", "-c", f"safe.directory={self.path.parent.as_posix()}", "rev-parse", "HEAD"], cwd=self.path.parent, capture_output=True, text=True, timeout=1, check=True)
             return result.stdout.strip()
