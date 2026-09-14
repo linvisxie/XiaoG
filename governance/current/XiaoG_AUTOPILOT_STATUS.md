@@ -13,19 +13,19 @@ MILESTONE: WP_2_ISOLATED_RUNTIME_DATA_SECRET_BOUNDARY_COMPLETE
 MILESTONE: WP_3_INVITED_ACCESS_RATE_COST_ABUSE_BOUNDARY_COMPLETE
 MILESTONE: WP_4_LOCAL_CI_RELEASE_DEPLOYMENT_READINESS_COMPLETE
 Window Start: 2026-09-14 Asia/Shanghai
-External Authorization: XIAOG-WP4-GITHUB-SOURCE-CONTROL-GATE-2026-09-14-V1 (GitHub private source control and CI only)
-Window Stop Gate: WP-4 local readiness and the authorized GitHub source-control/CI gate are complete. Handoff is required before any hosting, registry, deployment, secret, DNS, or access action.
-Current Stage: WP-4 — CI / Test-Gated Automatic Deployment / GitHub Gate Handoff Required
-Current Task: WP-4 local readiness and the narrowly authorized GitHub private-repository/CI step are complete. WP-3 remains Accepted/Closed; deployment remains unauthorized.
+External Authorization: XIAOG-WP4-GITHUB-SOURCE-CONTROL-GATE-2026-09-14-V1 (GitHub private source control and CI only); Product Owner-supplied ECS Preview deployment-verification evidence recorded below.
+Window Stop Gate: WP-4 local readiness, GitHub source-control/CI, and the supplied ECS Preview deployment verification are complete. Handoff is required before any public exposure, DNS, HTTPS configuration, real Provider, external secret, or invited-external-access action.
+Current Stage: WP-4 — CI / Test-Gated Automatic Deployment / ECS Verification Handoff Required
+Current Task: WP-4 local readiness, the narrowly authorized GitHub private-repository/CI step, and ECS Preview deployment verification evidence are complete. WP-3 remains Accepted/Closed. This evidence does not authorize public exposure or any further external action.
 Current Branch: main
 Start Accepted Baseline: Phase 5 / 78130be33c53d2c2b3c68e378ccc96cce9a144d7; Engineering Foundation product baseline / ffdfe3de10c87e50afc3d69017b1deaf7e883029
 Last Accepted Stable Baseline: WP-3 / 7bd80be7028e521a5d837bdd8f8a2b3c0adcc88b
-Current Candidate: WP-4 GitHub-CI-verified readiness / 641f5fb360f0f8e6e0cbaf27fbff3182a79d3550 (replacement candidate; not an external deployment)
-Last Checkpoint: 641f5fb360f0f8e6e0cbaf27fbff3182a79d3550 (WP-4 workflow quoting fix; local gate and GitHub CI passed)
-Working Tree: clean after GitHub-CI-verified candidate. The current STATUS/Handoff update is governance-only; no external deployment state was changed.
+Current Candidate: WP-4 ECS-verified Preview revision / 7814fc0f57af9cd5db677d121b50d32437f81b73.
+Last Checkpoint: 7814fc0f57af9cd5db677d121b50d32437f81b73 (container source-revision health fallback; strict local release gate and GitHub CI passed; ECS Preview health evidence recorded).
+Working Tree: clean before this governance-only ECS evidence update; no product, runtime, schema, test, or deployment configuration change is included here.
 Runtime Identity: Local default remains `main.py` / `backend.main:app` at `127.0.0.1:8000`. Preview is explicitly selected with `XIAOG_RUNTIME_MODE=preview`, an explicit non-local `XIAOG_DATA_DIR`, immutable `XIAOG_RELEASE_ID`, and the DeepSeek-only Preview allowlist. Preview health includes commit, runtime mode, and release identity.
-Tests Completed: `./.venv/Scripts/python.exe tools/ci/wp4_release_gate.py --revision HEAD` passed on replacement candidate `641f5fb360f0f8e6e0cbaf27fbff3182a79d3550`: 44/44 core regression, Preview release smoke, explicit 7-test WP-3 access/streaming suite, Python compile, frontend Node syntax, Git diff/revision/clean-tree checks, and secret scan. GitHub Actions workflow `XiaoG WP-4 release gate` run `34778077074` passed on that exact commit: its release gate and local container build/revision-label assertion both succeeded. No image was published and no deployment occurred.
-Tests Pending: no further source-control/CI test is pending for the verified candidate. Local Docker remains unavailable; GitHub CI supplied the authorized container build-contract evidence. Any registry, deployment, secret injection, real Provider check, or external access remains unauthorized.
+Tests Completed: `./.venv/Scripts/python.exe tools/ci/wp4_release_gate.py --revision HEAD` passed on `7814fc0f57af9cd5db677d121b50d32437f81b73`: 47/47 core regression, Preview release smoke, explicit 7-test WP-3 access/streaming suite, Python compile, frontend Node syntax, Git diff/revision/clean-tree checks, and secret scan. GitHub Actions workflow `XiaoG WP-4 release gate` run `34836960055` completed successfully on that exact commit. The Product Owner supplied ECS Preview runtime health evidence for the same immutable revision.
+Tests Pending: no further local source-control/CI test is pending for the verified candidate. Local Docker remains unavailable; GitHub CI supplied the container build-contract evidence. The recorded ECS evidence does not authorize secret injection, real Provider checks, public exposure, DNS, HTTPS configuration, or invited external access.
 
 ## WP-1 Delivery
 
@@ -58,7 +58,7 @@ In the Product Owner's real default Edge environment, while Conversation A is pr
 ## Governance and Scope Guard
 
 - Public Preview Addendum is approved roadmap scope; full Phase 9 Cloud, commercialization, open registration, desktop/cloud dual runtime, and unrelated product phases remain out of scope.
-- Authorized GitHub source-control/CI actions completed: private repository `linvisxie/XiaoG` at `https://github.com/linvisxie/XiaoG`, remote `origin` at `https://github.com/linvisxie/XiaoG.git`, and non-force `main` pushes. GitHub Actions ran only the repository WP-4 release-gate workflow. No hosting project, registry publish, DNS, cloud database/storage, external secret, tunnel, or external access was created or authorized.
+- Authorized GitHub source-control/CI actions completed: private repository `linvisxie/XiaoG` at `https://github.com/linvisxie/XiaoG`, remote `origin` at `https://github.com/linvisxie/XiaoG.git`, and non-force `main` pushes. GitHub Actions ran only the repository WP-4 release-gate workflow. Product Owner-supplied evidence records an ECS Preview deployment verification in Alibaba Cloud ECS Hong Kong for immutable revision `7814fc0f57af9cd5db677d121b50d32437f81b73`; this record does not authorize public exposure, DNS, HTTPS configuration, external secrets, real Provider, or invited external access. No registry publish, cloud database/storage, tunnel, or Terra integration is recorded here.
 - DeepSeek Registry maintenance remains backlog only and was not implemented.
-- No Worker, Controlled Dual-Codex, Phase 5.5, Phase 6+, or deployment was started.
-- Exact next action: Tech Lead reviews the completed WP-4 local and GitHub source-control/CI evidence and decides whether to grant a separate point-in-time authorization for a named next external step. Hosting, container-registry publish, deployment, DNS, external secrets, invited external access, real Provider, and Terra must not start automatically.
+- No Worker, Controlled Dual-Codex, Phase 5.5, Phase 6+, public exposure, DNS, HTTPS configuration, real Provider, external secret, invited external access, or Terra integration was started by this governance update.
+- Exact next action: Tech Lead reviews the completed WP-4 local, GitHub source-control/CI, and ECS Preview verification evidence and decides whether to grant a separate point-in-time authorization for a named next step. Public exposure, DNS, HTTPS configuration, external secrets, invited external access, real Provider, and Terra must not start automatically.
