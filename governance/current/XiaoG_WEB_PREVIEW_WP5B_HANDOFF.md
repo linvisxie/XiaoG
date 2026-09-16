@@ -11,8 +11,8 @@ The accepted topology remains fixed:
 Internet -> HTTPS :443 -> Nginx on ECS -> 127.0.0.1:8000 -> xiaog-preview
 ```
 
-The local gateway-preparation candidate is
-`6276ca66be4d51c8e559f437269c8cf2a283fc40`. It contains no XiaoG backend,
+The local deployment-activation package is
+`0b2314577b767df35ba638fd3eb15b8663161c41`. It contains no XiaoG backend,
 frontend, database-schema, Provider-architecture, secret, or deployed-image
 change. The current manually verified ECS image remains
 `7814fc0f57af9cd5db677d121b50d32437f81b73`.
@@ -38,6 +38,11 @@ change. The current manually verified ECS image remains
   `--apply`.
 - `deploy/WEB_PREVIEW_WP5B_EXTERNAL_GATEWAY.md` is the operator contract,
   acceptance checklist, and rollback guide.
+- `deploy/WP5B_EXTERNAL_PREVIEW_ACTIVATION_RUNBOOK.md` is the ordered final
+  operator runbook for preflight, authorized cloud actions, Nginx installation,
+  validation, external acceptance checks, and rollback.
+- `governance/current/WP5B_DEPLOYMENT_READINESS_CHECKLIST.md` records every
+  readiness item as READY, BLOCKED, or NEEDS HUMAN ACTION.
 - `tests/test_external_preview_gateway_contract.py` adds three deterministic,
   no-network checks for loopback proxying, HTTPS redirect/rate limit, SSE
   buffering/timeouts, log redaction, closed public TCP 8000, and Terra policy.
@@ -52,7 +57,7 @@ does not make authorization decisions from these forwarded headers.
 
 ## Local verification
 
-On clean candidate `6276ca66be4d51c8e559f437269c8cf2a283fc40`:
+On clean candidate `0b2314577b767df35ba638fd3eb15b8663161c41`:
 
 ```text
 .\.venv\Scripts\python.exe tools\ci\wp4_release_gate.py --revision HEAD
