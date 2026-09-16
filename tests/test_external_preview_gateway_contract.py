@@ -9,12 +9,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE = ROOT / "deploy" / "nginx" / "xiaog-preview.conf.template"
 GUIDE = ROOT / "deploy" / "WEB_PREVIEW_WP5B_EXTERNAL_GATEWAY.md"
+ROLLBACK = ROOT / "deploy" / "scripts" / "rollback_external_preview_gateway.sh"
 
 
 class ExternalPreviewGatewayContractTests(unittest.TestCase):
     def setUp(self) -> None:
         self.template = TEMPLATE.read_text(encoding="utf-8")
         self.guide = GUIDE.read_text(encoding="utf-8")
+        self.rollback = ROLLBACK.read_text(encoding="utf-8")
 
     def test_gateway_keeps_xiaog_loopback_private_and_preserves_sse(self) -> None:
         self.assertIn("proxy_pass http://127.0.0.1:8000;", self.template)
@@ -36,6 +38,8 @@ class ExternalPreviewGatewayContractTests(unittest.TestCase):
         self.assertNotIn("$request_body", access_log)
         self.assertIn("TCP 8000 stays closed publicly", self.guide)
         self.assertIn("Terra remains unavailable/not routed", self.guide)
+        self.assertIn("--remove-target", self.rollback)
+        self.assertIn('rm -f -- "$remove_target"', self.rollback)
 
 
 if __name__ == "__main__":

@@ -46,7 +46,9 @@ component and proxies to `127.0.0.1:8000`.
 1. Render `deploy/nginx/xiaog-preview.conf.template` with
    `deploy/scripts/render_nginx_preview_gateway.sh`. The template needs only a
    hostname and certificate/key *paths*, never secret values.
-2. The operator disables the distribution's conflicting default Nginx site,
+2. Obtain the TLS certificate before installing the TLS site configuration.
+   DNS validation is preferred because it does not require an interim public
+   HTTP listener. The operator disables the distribution's conflicting default Nginx site,
    reviews the generated file, and runs `nginx -t` before reload. The template
    intentionally owns the default HTTP/HTTPS vhosts so unknown `Host` headers
    are rejected rather than proxied. Install it only after the security group
@@ -61,6 +63,8 @@ component and proxies to `127.0.0.1:8000`.
    `deploy/scripts/rollback_external_preview_gateway.sh` with the known-good
    Nginx backup. Restore the prior Nginx configuration before considering any
    XiaoG image change. Preview session data is ephemeral and is never restored.
+   If this is the first XiaoG Nginx site and no prior site file exists, use the
+   explicit `--remove-target` rollback mode instead.
 
 ## Logging and header rules
 
