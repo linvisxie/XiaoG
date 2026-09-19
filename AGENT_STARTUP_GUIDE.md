@@ -18,32 +18,32 @@ XiaoG 不是：
 
 第一步：
 
-`XiaoG_MAIN_CODEX_ENTRY.md`
+`AGENT_STARTUP_GUIDE.md`
 
 第二步：
 
-`governance/core/v3.0/XiaoG_v3.0_Master_Document.md`（逻辑名称）
+`governance/INDEX.md`
 
-当前物理文件：
+第三步：
 
 `governance/core/V3.0文档库/XiaoG_v3.0_Master_Document（第三版总纲）.md`
 
-第三步：
+第四步：
 
 `governance/current/`
 
 先读取 `XiaoG_AUTOPILOT_STATUS.md`，再读取它指向的当前 Activation、Handoff、Pause Handoff 或恢复材料。
 
-第四步：
+第五步：
 
 根据任务读取：
 
-- `XiaoG_Master_Roadmap_v3.0_FINAL.md`：阶段与执行路线；
-- `XiaoG_Feature_Requirement_Registry_v3.0.md`：功能需求与范围；
-- `XiaoG_Project_Governance_Manual_v3.0.md`：授权、修改、验证和交付规范；
+- `governance/core/V3.0文档库/XiaoG_Master_Roadmap_v3.0_FINAL（阶段执行路线）.md`：阶段与执行路线；
+- `governance/core/V3.0文档库/XiaoG_Feature_Requirement_Registry_v3.0（功能需求）.md`：功能需求与范围；
+- `governance/core/V3.0文档库/XiaoG_Project_Governance_Manual_v3.0（治理规范）.md`：授权、修改、验证和交付规范；
 - 与任务直接相关的 Architecture、Product Decision、Migration 或历史决策文档。
 
-逻辑名称与当前物理路径以 `governance/INDEX.md` 为准。不要因为历史文档中的旧路径引用而移动或改写权威文件。
+当前文件名与物理路径以 `governance/INDEX.md` 为准。完成上述阅读后，Main Codex 仍须按 `XiaoG_MAIN_CODEX_ENTRY.md` 的 Fast Path 或 Cold Start / Recovery Path 执行 provenance check。不要因为历史文档中的旧路径引用而移动或改写权威文件。
 
 ## 3. 开发原则
 
@@ -54,7 +54,7 @@ XiaoG 不是：
 - 第三方 Runtime、Harness、Provider 或工具优先通过 XiaoG 自有 Contract / Adapter 隔离，不直接侵入核心。
 - 愿景、Roadmap 和 Registry 用于指导；不得把尚未实现的能力描述为当前事实。
 
-详细规则以 `XiaoG_Project_Governance_Manual_v3.0.md` 为准。
+详细规则以 `governance/core/V3.0文档库/XiaoG_Project_Governance_Manual_v3.0（治理规范）.md` 为准。
 
 ## 4. 当前项目状态读取方式
 

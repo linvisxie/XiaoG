@@ -12,17 +12,17 @@ Git、当前 STATUS 和权威治理文件共同决定项目事实；聊天记忆
 
 ## v3.0 核心文档导航
 
-v3.0 是当前第三版总纲体系。逻辑文档集合为 `governance/core/v3.0/`；当前仓库现场的真实物理目录为 `governance/core/V3.0文档库/`。在目录结构获得单独授权调整前，应使用下列真实路径，不得自行移动或改名。
+v3.0 是当前第三版总纲体系，其核心文档目录为 `governance/core/V3.0文档库/`。以下导航统一使用当前真实文件名和真实路径；在目录结构获得单独授权调整前，不得自行移动或改名。
 
-| 逻辑文档名 | 当前物理路径 | 定位 |
+| 当前文件名 | 当前物理路径 | 定位 |
 |---|---|---|
-| `XiaoG_v3.0_Master_Document.md` | `governance/core/V3.0文档库/XiaoG_v3.0_Master_Document（第三版总纲）.md` | 第三版总纲，最高级项目定义文件；用于理解 XiaoG 为什么存在、当前状态、最终目标与总体推进方式。 |
-| `XiaoG_Master_Roadmap_v3.0_FINAL.md` | `governance/core/V3.0文档库/XiaoG_Master_Roadmap_v3.0_FINAL（阶段执行路线）.md` | 阶段执行路线；定义阶段目标、顺序和进入条件。 |
-| `XiaoG_Feature_Requirement_Registry_v3.0.md` | `governance/core/V3.0文档库/XiaoG_Feature_Requirement_Registry_v3.0（功能需求）.md` | 功能需求库；用于查找能力需求、范围和归属。 |
-| `XiaoG_Project_Governance_Manual_v3.0.md` | `governance/core/V3.0文档库/XiaoG_Project_Governance_Manual_v3.0（治理规范）.md` | 开发治理规范；约束授权、修改范围、验证、报告、Git、架构变更和开源复用。 |
-| `XiaoG_v3.0_Migration_Master_Table.md` | `governance/core/V3.0文档库/XiaoG_v3.0_Migration_Master_Table（迁移记录）.md` | v2→v3 迁移记录；说明旧体系内容在第三版中的去向。 |
-| `XiaoG_Historical_Evolution_and_Decision_Log_v3.0.md` | `governance/core/V3.0文档库/XiaoG_Historical_Evolution_and_Decision_Log_v3.0（历史决策）.md` | 历史决策记录；保存演进背景、已作决定和理由。 |
-| `XiaoG_Final_Vision_and_Capability_Blueprint_v3.0.md` | `governance/core/V3.0文档库/XiaoG_Final_Vision_and_Capability_Blueprint_v3.0（最终愿景）.md` | 最终愿景与能力蓝图；定义 XiaoG 长期产品形态和能力边界。 |
+| `XiaoG_v3.0_Master_Document（第三版总纲）.md` | `governance/core/V3.0文档库/XiaoG_v3.0_Master_Document（第三版总纲）.md` | 第三版总纲，最高级项目定义文件；用于理解 XiaoG 为什么存在、当前状态、最终目标与总体推进方式。 |
+| `XiaoG_Master_Roadmap_v3.0_FINAL（阶段执行路线）.md` | `governance/core/V3.0文档库/XiaoG_Master_Roadmap_v3.0_FINAL（阶段执行路线）.md` | 阶段执行路线；定义阶段目标、顺序和进入条件。 |
+| `XiaoG_Feature_Requirement_Registry_v3.0（功能需求）.md` | `governance/core/V3.0文档库/XiaoG_Feature_Requirement_Registry_v3.0（功能需求）.md` | 功能需求库；用于查找能力需求、范围和归属。 |
+| `XiaoG_Project_Governance_Manual_v3.0（治理规范）.md` | `governance/core/V3.0文档库/XiaoG_Project_Governance_Manual_v3.0（治理规范）.md` | 开发治理规范；约束授权、修改范围、验证、报告、Git、架构变更和开源复用。 |
+| `XiaoG_v3.0_Migration_Master_Table（迁移记录）.md` | `governance/core/V3.0文档库/XiaoG_v3.0_Migration_Master_Table（迁移记录）.md` | v2→v3 迁移记录；说明旧体系内容在第三版中的去向。 |
+| `XiaoG_Historical_Evolution_and_Decision_Log_v3.0（历史决策）.md` | `governance/core/V3.0文档库/XiaoG_Historical_Evolution_and_Decision_Log_v3.0（历史决策）.md` | 历史决策记录；保存演进背景、已作决定和理由。 |
+| `XiaoG_Final_Vision_and_Capability_Blueprint_v3.0（最终愿景）.md` | `governance/core/V3.0文档库/XiaoG_Final_Vision_and_Capability_Blueprint_v3.0（最终愿景）.md` | 最终愿景与能力蓝图；定义 XiaoG 长期产品形态和能力边界。 |
 
 `XiaoG_Master_Roadmap_v3.0（旧版）.md` 是历史版本，不是 v3.0 FINAL 阶段执行路线。任何 Agent 使用 v3.0 文档前都应确认所引用的物理文件存在且已纳入当前 Git 基线。
 
@@ -34,9 +34,7 @@ v3.0 是当前第三版总纲体系。逻辑文档集合为 `governance/core/v3.
 
    ↓
 
-2. `governance/core/v3.0/` 的 `XiaoG_v3.0_Master_Document.md`
-
-   当前物理文件：`governance/core/V3.0文档库/XiaoG_v3.0_Master_Document（第三版总纲）.md`
+2. `governance/core/V3.0文档库/XiaoG_v3.0_Master_Document（第三版总纲）.md`
 
    ↓
 
@@ -44,9 +42,7 @@ v3.0 是当前第三版总纲体系。逻辑文档集合为 `governance/core/v3.
 
    ↓
 
-4. Feature Requirement Registry
-
-   当前物理文件：`governance/core/V3.0文档库/XiaoG_Feature_Requirement_Registry_v3.0（功能需求）.md`
+4. `governance/core/V3.0文档库/XiaoG_Feature_Requirement_Registry_v3.0（功能需求）.md`
 
    ↓
 
@@ -70,7 +66,7 @@ v3.0 是当前第三版总纲体系。逻辑文档集合为 `governance/core/v3.
 
 Archives: `governance/archive/wp0`, `wp1`, `wp2`, `wp3`; Foundation: `governance/archive/foundation`.
 
-Historical document names remain logical identifiers; this index maps them to their current physical paths without rewriting history.
+Historical documents may retain old path references as part of their original record; this index provides the current canonical paths without rewriting history.
 
 Main Codex may maintain STATUS, Handoffs, archive moves, this index, and entry material under explicit Tech Lead authorization. It may not alter the Core Protocol, Master Roadmap, or Product Decision text, initiate an Activation, or advance a phase autonomously.
 
