@@ -1,4 +1,9 @@
-"""Read only, sanitized XiaoG product status."""
+"""Read-only, sanitized XiaoG product status.
+
+``product_info.json`` is the single maintained source for the public version,
+phase, capabilities, limitations, and changelog. The immutable source revision
+is resolved at runtime so it cannot drift from the running checkout/image.
+"""
 from __future__ import annotations
 import json
 import os
