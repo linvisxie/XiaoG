@@ -11,6 +11,23 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 echo Starting XiaoG at http://127.0.0.1:8000 ...
+set "XIAOG_PID="
+for /f "tokens=5" %%P in ('netstat -ano ^| findstr /I "LISTENING" ^| findstr /I "127.0.0.1:8000"') do set "XIAOG_PID=%%P"
+if defined XIAOG_PID (
+  powershell -NoProfile -Command "try { $health = (Invoke-WebRequest -UseBasicParsing -TimeoutSec 2 http://127.0.0.1:8000/health).Content; if ($health -match 'XiaoG') { exit 0 } else { exit 1 } } catch { exit 1 }"
+  if not errorlevel 1 (
+    echo XiaoG is already running. PID: %XIAOG_PID%
+    start "" "http://127.0.0.1:8000"
+    echo Opened the existing XiaoG instance. Keep this window open while using it.
+    pause
+    exit /b 0
+  )
+  echo Port 8000 is already in use by PID %XIAOG_PID%. XiaoG will not start a second backend.
+  echo Stop or reconfigure the process using port 8000, then try again.
+  pause
+  exit /b 1
+)
+
 start "XiaoG Backend" /B ".venv\Scripts\python.exe" -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
 
 set "READY="

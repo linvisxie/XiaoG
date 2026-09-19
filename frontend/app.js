@@ -394,6 +394,17 @@ async function loadProviderStatus() {
     renderManualReasoning(); renderProviderManagement(); syncModelStatus();
   } catch (error) { console.error("provider-status UI initialization failed", error); const note = $("#provider-note"); if (note) note.textContent = "模型状态界面初始化失败，请刷新页面。"; notify("模型状态界面初始化失败", "error"); }
 }
+async function loadRuntimeStatus() {
+  const element = $("#runtime-status"); if (!element) return;
+  try {
+    const health = await request("/health", { cache: "no-store" }), selectionKey = modelSelect.value;
+    const model = selectionKey === "auto" ? "Auto" : selectionModelLabel(selectionKey);
+    const available = state.providerStatus?.[selectionKey]?.available !== false;
+    const commit = health.commit && health.commit !== "unavailable" ? " · " + health.commit.slice(0, 7) : "";
+    element.textContent = "后端在线 · " + (health.runtime_mode || "unknown") + " · " + model + " " + (available ? "可用" : "不可用") + " · v" + (health.version || "?") + commit;
+    element.title = "运行模式: " + (health.runtime_mode || "unknown") + "; release: " + (health.release_id || "unknown") + "; commit: " + (health.commit || "unavailable");
+  } catch (error) { element.textContent = "后端状态不可用"; element.title = "无法读取 /health"; }
+}
 
 async function sendMessage(content) {
   if (!content.trim() || isActiveGeneration() || conversationRestricted()) return;
@@ -524,6 +535,7 @@ inputEl.addEventListener("keydown", (event) => {
   if (shouldSend) { event.preventDefault(); $("#chat-form").requestSubmit(); }
 });
 $("#new-chat").onclick = startDraft; $("#open-archived").onclick = () => showView("archived"); $("#open-trash").onclick = () => showView("trash"); $("#back-to-history").onclick = startDraft; $("#empty-trash").onclick = emptyTrash; $("#history-search").addEventListener("input", scheduleGlobalSearch); $("#sidebar-toggle").onclick = () => setSidebarCollapsed(!state.sidebarCollapsed); $("#edit-title").onclick = updateCurrentTitle; stopButton.onclick = () => { if (isCurrentConversationGenerating()) state.generation.controller.abort(); }; modelSelect.onchange = () => updateConversationModelSelection(modelSelect.value).catch((error) => notify(error.message || "模型设置保存失败", "error")); $("#open-settings").onclick = () => openSettings().catch((error) => notify(error.message || "设置加载失败", "error")); $("#close-settings").onclick = () => $("#settings-dialog").close(); document.querySelectorAll("[data-settings-tab]").forEach((tab) => tab.onclick = () => activateSettingsTab(tab.dataset.settingsTab));
+modelSelect.addEventListener("change", () => { loadRuntimeStatus(); });
 document.querySelectorAll('input[name="theme-mode"]').forEach((input) => input.onchange = () => choosePersonalization({ theme_mode: input.value }));
 document.querySelectorAll("#color-scheme-options [data-color-scheme]").forEach((button) => button.onclick = () => choosePersonalization({ color_scheme: button.dataset.colorScheme }));
 document.querySelectorAll("#assistant-avatar-options [data-assistant-avatar]").forEach((button) => button.onclick = () => choosePersonalization({ assistant_avatar: button.dataset.assistantAvatar }));
@@ -541,4 +553,4 @@ $("#reset-user-avatar").onclick = async () => { await choosePersonalization({ us
 document.querySelectorAll("[data-coming-soon]").forEach((button) => button.onclick = () => notify(button.dataset.comingSoon, "system"));
 $("#settings-form").addEventListener("submit", async (event) => { event.preventDefault(); try { await request("/api/settings", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ system_prompt: $("#system-prompt").value, user_profile: $("#user-profile").value }) }); notify("系统设置保存成功", "success"); } catch (error) { notify(error.message || "系统设置保存失败", "error"); } });document.addEventListener("click", (event) => { if (!event.target.closest("#conversation-menu") && !event.target.closest(".conversation-more")) closeConversationMenu(); }); document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeConversationMenu(); }); window.addEventListener("resize", closeConversationMenu);
 
-(async function boot() { setSidebarCollapsed(state.sidebarCollapsed); setHeaderTitle("新聊天"); emptyMessages(); await loadPersonalization(); await loadProviderStatus(); await startDraft(); inputEl.focus(); })().catch((error) => { console.error(error); $("#provider-note").textContent = "启动初始化失败，请刷新页面。"; notify(error.message || "XiaoG 初始化失败", "error"); });
+(async function boot() { setSidebarCollapsed(state.sidebarCollapsed); setHeaderTitle("新聊天"); emptyMessages(); await loadPersonalization(); await loadProviderStatus(); await loadRuntimeStatus(); await startDraft(); inputEl.focus(); })().catch((error) => { console.error(error); $("#provider-note").textContent = "启动初始化失败，请刷新页面。"; notify(error.message || "XiaoG 初始化失败", "error"); });
