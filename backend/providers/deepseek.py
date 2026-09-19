@@ -2,11 +2,57 @@
 
 from collections.abc import AsyncIterator
 import json
+import socket
+import ssl
+from urllib.parse import urlparse
 
 import httpx
 
 from backend.config import settings
+from backend.diagnostics import diagnostic_logger, log_event
 from backend.providers.base import ModelProvider, ProviderError, ProviderStatus
+
+
+logger = diagnostic_logger("provider.deepseek")
+
+
+def _exception_chain(exc: BaseException) -> list[BaseException]:
+    chain: list[BaseException] = []
+    pending: list[BaseException] = [exc]
+    seen: set[int] = set()
+    while pending:
+        current = pending.pop()
+        if id(current) in seen:
+            continue
+        seen.add(id(current))
+        chain.append(current)
+        nested = list(getattr(current, "exceptions", ()))
+        cause = current.__cause__ or current.__context__
+        if cause is not None:
+            nested.append(cause)
+        pending.extend(reversed(nested))
+    return chain
+
+
+def _request_error_category(exc: httpx.RequestError) -> str:
+    chain = _exception_chain(exc)
+    if isinstance(exc, httpx.TimeoutException):
+        return "timeout"
+    if any(isinstance(item, ssl.SSLError) for item in chain):
+        return "tls"
+    if any(isinstance(item, socket.gaierror) for item in chain):
+        return "dns"
+    if any(isinstance(item, PermissionError) for item in chain):
+        return "connect_permission"
+    if isinstance(exc, httpx.ConnectError):
+        return "connect"
+    return "network"
+
+
+def _request_error_message(exc: httpx.RequestError) -> str:
+    chain = _exception_chain(exc)
+    detail = next((item for item in chain if isinstance(item, PermissionError)), chain[-1] if chain else exc)
+    return f"{type(detail).__name__}: {detail}"
 
 
 class DeepSeekProvider(ModelProvider):
@@ -61,12 +107,22 @@ class DeepSeekProvider(ModelProvider):
 
     async def stream_chat(self, messages: list[dict[str, str]], reasoning_effort: str | None = None) -> AsyncIterator[dict]:
         url = f"{settings.deepseek_base_url}/chat/completions"
+        target_host = urlparse(url).hostname or "unknown"
         timeout = httpx.Timeout(connect=15.0, read=180.0, write=30.0, pool=30.0)
         try:
             async with httpx.AsyncClient(timeout=timeout) as client:
                 async with client.stream("POST", url, headers=self._headers(), json=self._payload(messages, True, reasoning_effort)) as response:
                     if response.status_code >= 400:
                         body = await response.aread()
+                        log_event(
+                            logger,
+                            30,
+                            "deepseek_http_error",
+                            category="http",
+                            retryable=response.status_code == 429 or response.status_code >= 500,
+                            status_code=response.status_code,
+                            target_host=target_host,
+                        )
                         raise ProviderError(self._friendly_error(response.status_code, body.decode("utf-8", "ignore")))
                     async for line in response.aiter_lines():
                         if not line or line.startswith(":") or not line.startswith("data:"):
@@ -89,8 +145,28 @@ class DeepSeekProvider(ModelProvider):
         except ProviderError:
             raise
         except httpx.TimeoutException as exc:
+            log_event(
+                logger,
+                30,
+                "deepseek_request_failed",
+                category=_request_error_category(exc),
+                exception_class=type(exc).__name__,
+                message=_request_error_message(exc),
+                retryable=True,
+                target_host=target_host,
+            )
             raise ProviderError("DeepSeek响应超时，请检查网络或稍后重试。") from exc
         except httpx.RequestError as exc:
+            log_event(
+                logger,
+                30,
+                "deepseek_request_failed",
+                category=_request_error_category(exc),
+                exception_class=type(exc).__name__,
+                message=_request_error_message(exc),
+                retryable=True,
+                target_host=target_host,
+            )
             raise ProviderError("DeepSeek连接失败，请检查网络或API配置。") from exc
 
     async def send_message(self, messages: list[dict[str, str]], reasoning_effort: str | None = None) -> dict:
