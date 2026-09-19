@@ -382,6 +382,7 @@ async function saveConversationModelSettings() {
 }
 function syncModelStatus(forcedState) { const key = modelSelect.value, label = selectionModelLabel(key), available = state.providerStatus?.[key]?.available !== false, status = forcedState || (available ? "available" : "error"), element = $("#model-status"); if (!element) return; element.className = `model-status ${status}`; const labelElement = $("#model-status-label"); if (labelElement) labelElement.textContent = label; }
 async function loadProviderStatus() {
+  const providerNote = $("#provider-note"); if (providerNote) providerNote.hidden = true;
   let status;
   try { status = await request("/api/provider-status"); }
   catch (error) { console.error("provider-status request failed", error); const note = $("#provider-note"); if (note) note.textContent = "无法读取模型状态。"; syncModelStatus("error"); notify("模型连接状态读取失败", "error"); return; }
