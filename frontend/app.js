@@ -396,6 +396,7 @@ async function loadProviderStatus() {
 }
 async function loadRuntimeStatus() {
   const element = $("#runtime-status"); if (!element) return;
+  element.hidden = true;
   try {
     const health = await request("/health", { cache: "no-store" }), selectionKey = modelSelect.value;
     const model = selectionKey === "auto" ? "Auto" : selectionModelLabel(selectionKey);
